@@ -1,0 +1,55 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RoslynAnalysers", "RoslynAnalysers\RoslynAnalysers.csproj", "{2AA46A22-9D60-4737-8C2F-639B9636F872}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{8F6A719A-C9EA-4836-80B9-A8FAD870031E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{06CE9746-01A4-414B-BCDB-908B8B0BF84E}"
+	ProjectSection(SolutionItems) = preProject
+		RoslynAnalysers.sln.DotSettings = RoslynAnalysers.sln.DotSettings
+		..\.gitattributes = ..\.gitattributes
+		..\.gitignore = ..\.gitignore
+		..\.nuke = ..\.nuke
+		..\build.cmd = ..\build.cmd
+		..\build.ps1 = ..\build.ps1
+		..\build.sh = ..\build.sh
+		..\CONTRIBUTING.md = ..\CONTRIBUTING.md
+		..\GitVersion.yml = ..\GitVersion.yml
+		..\LICENSE.txt = ..\LICENSE.txt
+		..\NuGet.config = ..\NuGet.config
+		..\readme.md = ..\readme.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{54B3DEDC-9D11-4D9F-BCE2-8A6CE55774D8}"
+ProjectSection(SolutionItems) = preProject
+	..\build\.editorconfig = ..\build\.editorconfig
+	..\build\_build.csproj = ..\build\_build.csproj
+	..\build\_build.csproj.DotSettings = ..\build\_build.csproj.DotSettings
+	..\build\Build.cs = ..\build\Build.cs
+EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2AA46A22-9D60-4737-8C2F-639B9636F872}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2AA46A22-9D60-4737-8C2F-639B9636F872}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2AA46A22-9D60-4737-8C2F-639B9636F872}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2AA46A22-9D60-4737-8C2F-639B9636F872}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7D418153-913F-4E5C-99E1-9F6D7842ED68}
+	EndGlobalSection
+EndGlobal

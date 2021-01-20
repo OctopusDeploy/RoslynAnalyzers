@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\source\Octopus\RoslynAnalyzers\source\UnwantedMethodCallsAnalyzer" t="IncludeFlat">
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="Readme.md" t="Include" />
+      <e p="Solution Items" t="Include" />
+      <e p="UnwantedMethodCallsAnalyzer" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netstandard2.0" t="Include">
+              <e p="UnwantedMethodCallsAnalyzer.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="SimpleJson.cs" t="Include" />
+        <e p="UnwantedMethodCallsAnalyzer.csproj" t="IncludeRecursive" />
+        <e p="UnwantedMethodCallsAnalyzerAnalyzer.cs" t="Include" />
+      </e>
+      <e p="UnwantedMethodCallsAnalyzer.Package" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netstandard2.0" t="Include">
+              <e p="UnwantedMethodCallsAnalyzer.Package.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="tools" t="Include">
+          <e p="install.ps1" t="Include" />
+          <e p="uninstall.ps1" t="Include" />
+        </e>
+        <e p="UnwantedMethodCallsAnalyzer.Package.csproj" t="IncludeRecursive" />
+      </e>
+      <e p="UnwantedMethodCallsAnalyzer.sln" t="IncludeFlat" />
+      <e p="UnwantedMethodCallsAnalyzer.sln.DotSettings" t="Include" />
+      <e p="UnwantedMethodCallsAnalyzer.Test" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netcoreapp3.1" t="Include">
+              <e p="UnwantedMethodCallsAnalyzer.Test.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="UnwantedMethodCallAnalyzerTest.cs" t="Include" />
+        <e p="UnwantedMethodCallsAnalyzer.Test.csproj" t="IncludeRecursive" />
+        <e p="UnwantedMethodCallsAnalyzer.Test.csproj.DotSettings" t="Include" />
+        <e p="Verifiers" t="Include">
+          <e p="CSharpAnalyzerVerifier`1+Test.cs" t="Include" />
+          <e p="CSharpAnalyzerVerifier`1.cs" t="Include" />
+          <e p="CSharpCodeFixVerifier`2+Test.cs" t="Include" />
+          <e p="CSharpCodeFixVerifier`2.cs" t="Include" />
+          <e p="CSharpCodeRefactoringVerifier`1+Test.cs" t="Include" />
+          <e p="CSharpCodeRefactoringVerifier`1.cs" t="Include" />
+          <e p="CSharpVerifierHelper.cs" t="Include" />
+          <e p="VisualBasicAnalyzerVerifier`1+Test.cs" t="Include" />
+          <e p="VisualBasicAnalyzerVerifier`1.cs" t="Include" />
+          <e p="VisualBasicCodeFixVerifier`2+Test.cs" t="Include" />
+          <e p="VisualBasicCodeFixVerifier`2.cs" t="Include" />
+          <e p="VisualBasicCodeRefactoringVerifier`1+Test.cs" t="Include" />
+          <e p="VisualBasicCodeRefactoringVerifier`1.cs" t="Include" />
+        </e>
+      </e>
+      <e p="UnwantedMethodCallsAnalyzer.Vsix" t="IncludeRecursive">
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="net472" t="Include">
+              <e p="UnwantedMethodCallsAnalyzer.Vsix.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="source.extension.vsixmanifest" t="Include" />
+        <e p="UnwantedMethodCallsAnalyzer.Vsix.csproj" t="IncludeRecursive" />
+      </e>
+    </e>
+    <e p="C:\Users\rober\.nuget\packages\microsoft.net.test.sdk\16.8.3\build\netcoreapp2.1" t="Include">
+      <e p="Microsoft.NET.Test.Sdk.Program.cs" t="Include" />
+    </e>
+    <e p="C:\Users\rober\.nuget\packages\microsoft.testplatform.testhost\16.8.3\build\netcoreapp2.1\x64\Microsoft.TestPlatform.PlatformAbstractions.dll" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.testplatform.testhost\16.8.3\build\netcoreapp2.1\x64\testhost.dll" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.testplatform.testhost\16.8.3\build\netcoreapp2.1\x64\testhost.exe" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.visualstudio.sdk.analyzers\15.8.33\build\AdditionalFiles\vs-threading.MainThreadAssertingMethods.txt" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.visualstudio.sdk.analyzers\15.8.33\build\AdditionalFiles\vs-threading.MainThreadSwitchingMethods.txt" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.visualstudio.sdk.analyzers\15.8.33\build\AdditionalFiles\vs-threading.MembersRequiringMainThread.txt" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.visualstudio.threading.analyzers\15.8.122\build\AdditionalFiles\vs-threading.MainThreadAssertingMethods.txt" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.visualstudio.threading.analyzers\15.8.122\build\AdditionalFiles\vs-threading.MainThreadSwitchingMethods.txt" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\microsoft.visualstudio.threading.analyzers\15.8.122\build\AdditionalFiles\vs-threading.MembersRequiringMainThread.txt" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\xunit.runner.visualstudio\2.4.3\build\netcoreapp2.1\xunit.runner.reporters.netcoreapp10.dll" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\xunit.runner.visualstudio\2.4.3\build\netcoreapp2.1\xunit.runner.utility.netcoreapp10.dll" t="Include" />
+    <e p="C:\Users\rober\.nuget\packages\xunit.runner.visualstudio\2.4.3\build\netcoreapp2.1\xunit.runner.visualstudio.dotnetcore.testadapter.dll" t="Include" />
+    <e p="C:\Users\rober\AppData\Local\JetBrains\Rider2020.2\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\rober\AppData\Local\JetBrains\Rider2020.2\resharper-host\Local\Transient\Rider\v202\SolutionCaches\_UnwantedMethodCallsAnalyzer.-299560748.00" t="ExcludeRecursive" />
+    <e p="C:\Users\rober\AppData\Roaming\JetBrains\Rider2020.2\consoles\db" t="IncludeRecursive" />
+    <e p="C:\Users\rober\AppData\Roaming\JetBrains\Rider2020.2\extensions" t="IncludeRecursive" />
+  </component>
+</project>
