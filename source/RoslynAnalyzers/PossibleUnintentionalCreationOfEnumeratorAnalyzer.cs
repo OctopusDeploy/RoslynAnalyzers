@@ -15,7 +15,7 @@ namespace Octopus.RoslynAnalyzers
 
         const string Title = "Any(), Count() or None() call likely unintentionally creates an enumerator";
 
-        const string MessageFormat = "This Any(), Count() or None() call on this type likely creates an enumerator unintentionally. This can cause performance problems. Use the Count or Length properties instead.";
+        const string MessageFormat = "This Any(), Count() or None() call on this type likely creates an enumerator unintentionally. This can cause performance problems. Use our custom extension methods or the Count or Length properties instead.";
         const string Category = "Octopus";
 
         const string Description = @"The Any() and Count() extension methods cause the target to be enumerated unless it 
