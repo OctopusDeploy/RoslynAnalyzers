@@ -1,7 +1,7 @@
-using System.Runtime.InteropServices.ComTypes;
+using System;
 using Microsoft.CodeAnalysis;
 
-namespace Octopus.RoslynAnalysers
+namespace Octopus.RoslynAnalyzers
 {
     public static class Extensions
     {
