@@ -56,7 +56,7 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() =>
         {
-            Logger.Info("Building Octopus.RoslynAnalysers v{0}", GitVersion.FullSemVer);
+            Logger.Info("Building Octopus.RoslynAnalyzers v{0}", GitVersion.FullSemVer);
             Logger.Info("Informational Version {0}", GitVersion.InformationalVersion);
 
             DotNetBuild(_ => _
@@ -102,7 +102,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             EnsureExistingDirectory(LocalPackagesDirectory);
-            CopyFileToDirectory(ArtifactsDirectory / $"Octopus.RoslynAnalysers.{GitVersion.FullSemVer}.nupkg", LocalPackagesDirectory, FileExistsPolicy.Overwrite);
+            CopyFileToDirectory(ArtifactsDirectory / $"Octopus.RoslynAnalyzers.{GitVersion.FullSemVer}.nupkg", LocalPackagesDirectory, FileExistsPolicy.Overwrite);
         });
 
     Target Default => _ => _

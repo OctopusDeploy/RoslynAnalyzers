@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <Authors>Octopus Deploy</Authors>
-    <AssemblyName>Octopus.RoslynAnalysers</AssemblyName>
-    <RootNamespace>Octopus.RoslynAnalysers</RootNamespace>
-    <PackageProjectUrl>https://github.com/OctopusDeploy/RoslynAnalysers</PackageProjectUrl>
+    <AssemblyName>Octopus.RoslynAnalyzers</AssemblyName>
+    <RootNamespace>Octopus.RoslynAnalyzers</RootNamespace>
+    <PackageProjectUrl>https://github.com/OctopusDeploy/RoslynAnalyzers</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <DisableImplicitPackageTargetFallback>true</DisableImplicitPackageTargetFallback>
     <Nullable>enable</Nullable>
