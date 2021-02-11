@@ -39,6 +39,7 @@ namespace Tests
         }
 
         [TestCase("new List<string>().Any()")]
+        [TestCase("((ICollection<string>) new List<string>()).Any()")]
         [TestCase("new Dictionary<string, string>().Any()")]
         [TestCase("new HashSet<string>().Any()")]
         [TestCase("new Queue<string>().Any()")] // Only implements ICollection

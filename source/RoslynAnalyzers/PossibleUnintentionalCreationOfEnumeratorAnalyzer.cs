@@ -91,6 +91,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
 
             if(targetCollectionTypeInfo.Type is INamedTypeSymbol targetCollectionType)
                 return IsIEnumerableOfT(targetCollectionType) ||
+                    IsThisTypeSpeciallyHandledByTheImplementation(targetCollectionType) ||
                     targetCollectionType.AllInterfaces.Any(IsThisTypeSpeciallyHandledByTheImplementation);
 
             return false;
