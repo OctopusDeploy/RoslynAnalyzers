@@ -47,7 +47,8 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
         {
             if (
                 context.Node is InvocationExpressionSyntax invocation &&
-                invocation.Expression is MemberAccessExpressionSyntax memberAccess
+                invocation.Expression is MemberAccessExpressionSyntax memberAccess &&
+                IsACallWeAreInterestedIn(memberAccess)
             )
             {
                 var checkRequired = WhichCollectionsCouldThisCallCreateEnumeratorsFor(context, memberAccess);
@@ -69,6 +70,22 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
             All
         }
 
+        static bool IsACallWeAreInterestedIn(MemberAccessExpressionSyntax memberAccessExpression)
+        {
+            var methodName = memberAccessExpression.Name.Identifier.Text;
+
+            // This provides a quick short circuit as the GetSymbolInfo call (below) is relatively expensive
+            switch (methodName)
+            {
+                case "Any":
+                case "Count":
+                case "None":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         static CollectionCheckRequired WhichCollectionsCouldThisCallCreateEnumeratorsFor(SyntaxNodeAnalysisContext context, MemberAccessExpressionSyntax memberAccessExpression)
         {
             var symbol = context.SemanticModel.GetSymbolInfo(memberAccessExpression).Symbol as IMethodSymbol;
@@ -87,7 +104,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
                     return symbol.ContainingType.IsNonGenericType("Enumerable", "System", "Linq")
                         ? (
                             symbol.ContainingAssembly.Identity.Version.Major >= 5
-                                ? CollectionCheckRequired.NonKnownTypes // .NET 5 brought Any inline with Count
+                                ? CollectionCheckRequired.NonKnownTypes // .NET 5 brought Any inline with Count (see https://github.com/dotnet/corefx/pull/40377)
                                 : CollectionCheckRequired.All
                         )
                         : CollectionCheckRequired.None;
@@ -107,12 +124,12 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
         static bool IsTheTargetCollectionAKnownTypeThatDoesNotCreateAnEnumerator(
             SyntaxNodeAnalysisContext context,
             InvocationExpressionSyntax invocation,
-            CollectionCheckRequired checkRequired)
+            CollectionCheckRequired checkRequired
+        )
         {
             var targetCollectionExpression = invocation.ArgumentList.Arguments.Count == 0
                 ? ((MemberAccessExpressionSyntax)invocation.Expression).Expression // Target of the extension method
                 : invocation.ArgumentList.Arguments[0].Expression; // Statically called argument
-
 
             var targetCollectionTypeInfo = context.SemanticModel.GetTypeInfo(targetCollectionExpression);
 
