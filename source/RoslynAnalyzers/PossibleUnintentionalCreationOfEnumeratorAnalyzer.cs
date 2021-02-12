@@ -55,7 +55,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
                 if (checkRequired == CollectionCheckRequired.None)
                     return;
 
-                if (!IsTheTargetCollectionAKnownTypeThatDoesNotCreateAnEnumerator(context, invocation, checkRequired))
+                if (!IsTheTargetCollectionIgnoredForThisCheck(context, invocation, checkRequired))
                 {
                     var diagnostic = Diagnostic.Create(Rule, memberAccess.Name.GetLocation());
                     context.ReportDiagnostic(diagnostic);
@@ -96,7 +96,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
                 symbol == null ||
                 !symbol.ContainingType.IsStatic ||
                 symbol.Parameters.Length != 1 ||
-                !IsIEnumerableOfT(symbol.Parameters[0].Type)
+                symbol.Parameters[0].Type.Name != "IEnumerable"
             )
                 return CollectionCheckRequired.None;
 
@@ -123,7 +123,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
             }
         }
 
-        static bool IsTheTargetCollectionAKnownTypeThatDoesNotCreateAnEnumerator(
+        static bool IsTheTargetCollectionIgnoredForThisCheck(
             SyntaxNodeAnalysisContext context,
             InvocationExpressionSyntax invocation,
             CollectionCheckRequired checkRequired
@@ -137,7 +137,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
 
             if (targetCollectionTypeInfo.Type is INamedTypeSymbol targetCollectionType)
             {
-                if (IsIEnumerableOfT(targetCollectionType))
+                if (IsTypeWhereTheAuthorExpectedItToCreateAnEnumerator(targetCollectionType))
                     return true;
 
                 if (checkRequired == CollectionCheckRequired.All)
@@ -163,7 +163,8 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
                 type.IsGenericType("IListProvider", 1, "System", "Linq") ||
                 type.IsNonGenericType("ICollection", "System", "Collections");
 
-        static bool IsIEnumerableOfT(ITypeSymbol type)
-            => type is INamedTypeSymbol named && named.IsGenericType("IEnumerable", 1, "System", "Collections", "Generic");
+        static bool IsTypeWhereTheAuthorExpectedItToCreateAnEnumerator(ITypeSymbol type)
+            => type.Name == "IEnumerable" ||
+                type.Name == "IGrouping";
     }
 }

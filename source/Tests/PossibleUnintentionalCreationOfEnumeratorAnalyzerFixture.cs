@@ -94,10 +94,14 @@ namespace Tests
         [Test]
         public async Task IgnoresIEnumerable()
         {
-            var source = GetSource(
-                @"IEnumerable<string> collection = new CustomCollection(); 
-                                              var n = collection.Any();"
-            );
+            var source = GetSource(@"var n = ((IEnumerable<string>) null).Any();");
+            await Verify.VerifyAnalyzerAsync(source);
+        }
+
+        [Test]
+        public async Task IgnoresIGrouping()
+        {
+            var source = GetSource(@"var n = ((IGrouping<string, string>) null).Count();");
             await Verify.VerifyAnalyzerAsync(source);
         }
 
