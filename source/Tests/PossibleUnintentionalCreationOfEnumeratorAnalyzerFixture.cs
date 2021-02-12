@@ -85,7 +85,7 @@ namespace Tests
         }
 
         [TestCaseSource(nameof(KnownTypesThatThisCheckShouldIgnore))]
-        public async Task NoneCallIsIgnoredOnKnownTypesDetectedCorrectly(string type)
+        public async Task NoneCallIsIgnoredOnKnownTypes(string type)
         {
             var source = GetSource($"var n = {type}.None();");
             await Verify.VerifyAnalyzerAsync(source);
@@ -98,6 +98,13 @@ namespace Tests
                 @"IEnumerable<string> collection = new CustomCollection(); 
                                               var n = collection.Any();"
             );
+            await Verify.VerifyAnalyzerAsync(source);
+        }
+
+        [Test]
+        public async Task IgnoresIfTheParameterTypeIsNotIEnumerable()
+        {
+            var source = GetSource(@"var n = ""test"".None();");
             await Verify.VerifyAnalyzerAsync(source);
         }
 
@@ -129,6 +136,9 @@ namespace Octopus.Test {
 	
 	public static class Extensions {
 		public static bool None<T>(this IEnumerable<T> collection)
+			=> false;
+
+        public static bool None(this string str)
 			=> false;
 	}
 }

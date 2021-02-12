@@ -91,10 +91,12 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
             var symbol = context.SemanticModel.GetSymbolInfo(memberAccessExpression).Symbol as IMethodSymbol;
             symbol = symbol?.ReducedFrom ?? symbol; // If called as an extension method gets the static invocation symbol
 
+            // Only interested in static methods with signature (IEnumerable<T>)
             if (
                 symbol == null ||
+                !symbol.ContainingType.IsStatic ||
                 symbol.Parameters.Length != 1 ||
-                !symbol.ContainingType.IsStatic
+                !IsIEnumerableOfT(symbol.Parameters[0].Type)
             )
                 return CollectionCheckRequired.None;
 
@@ -161,7 +163,7 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
                 type.IsGenericType("IListProvider", 1, "System", "Linq") ||
                 type.IsNonGenericType("ICollection", "System", "Collections");
 
-        static bool IsIEnumerableOfT(INamedTypeSymbol type)
-            => type.IsGenericType("IEnumerable", 1, "System", "Collections", "Generic");
+        static bool IsIEnumerableOfT(ITypeSymbol type)
+            => type is INamedTypeSymbol named && named.IsGenericType("IEnumerable", 1, "System", "Collections", "Generic");
     }
 }
