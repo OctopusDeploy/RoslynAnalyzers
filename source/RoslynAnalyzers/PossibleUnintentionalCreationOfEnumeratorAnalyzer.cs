@@ -40,10 +40,10 @@ Any(). A best effort is used to catch this usage as they should mainly be under 
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterSyntaxNodeAction(CheckUnwantedMethodCalls, SyntaxKind.InvocationExpression);
+            context.RegisterSyntaxNodeAction(CheckForUnexpectedEnumeration, SyntaxKind.InvocationExpression);
         }
 
-        void CheckUnwantedMethodCalls(SyntaxNodeAnalysisContext context)
+        void CheckForUnexpectedEnumeration(SyntaxNodeAnalysisContext context)
         {
             if (
                 context.Node is InvocationExpressionSyntax invocation &&
