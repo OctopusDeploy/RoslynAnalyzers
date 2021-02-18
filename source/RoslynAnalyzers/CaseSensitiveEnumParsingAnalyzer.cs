@@ -10,7 +10,7 @@ namespace Octopus.RoslynAnalyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class CaseSensitiveEnumParsingAnalyzer : DiagnosticAnalyzer
     {
-        const string DiagnosticId = "Octopus_CaseSensitiveEnumParsingAnalyzer";
+        const string DiagnosticId = "Octopus_CaseSensitiveEnumParsing";
 
         const string Title = "Enum.Parse is case sensitive";
 
