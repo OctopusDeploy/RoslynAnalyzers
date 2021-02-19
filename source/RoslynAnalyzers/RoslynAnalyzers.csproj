@@ -12,7 +12,8 @@
     <NoWarn>RS2008</NoWarn>
     <LangVersion>8</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <!-- At the time of writing anything later than netstandard 2.0 doesn't work in Visual Studio -->
+    <TargetFramework>netstandard2.0</TargetFramework>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Octopus Deploy Roslyn analyzers</Description>
     <Copyright>Octopus Deploy Pty Ltd</Copyright>
@@ -23,10 +24,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2" />
     <!--
-    Using this version is intentional! 
+    Using this version is intentional!
     The newer version(s) break under the 'dotnet build' chain when this is added as a nuget package to another project. (Tested under .NET 5.0.101)
-    Fails with versions: 
-      Microsoft.CodeAnalysis.CSharp 3.8.0 
+    Fails with versions:
+      Microsoft.CodeAnalysis.CSharp 3.8.0
       Microsoft.CodeAnalysis.CSharp 3.3.9.0-4.21056.26
     -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.7.0" />
