@@ -14,10 +14,10 @@ namespace Octopus.RoslynAnalyzers
 
         const string Title = "Call to AddRange in NuGet Extensions";
 
-        const string MessageFormat = "This call uses the NuGet Extension methods, it should use the one we define instead. Remove the NuGet.Packaging namespace and add Octopus.CoreUtilities.Extensions.";
+        const string MessageFormat = "This call uses the NuGet Extension methods, but it should use the one we define instead. Remove the NuGet.Packaging namespace and add Octopus.CoreUtilities.Extensions.";
         const string Category = "Octopus";
 
-        const string Description = @"The NuGet.Packaging dll defines a AddRange extension method. We want to avoid using it as it'll lead to import clashes later.";
+        const string Description = @"The NuGet.Packaging dll defines an AddRange extension method. We want to avoid using it as it'll lead to import clashes later.";
 
         internal static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
