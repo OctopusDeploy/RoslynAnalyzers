@@ -3,21 +3,22 @@ using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
 using Nuke.Common.Tools.DotNet;
-using Nuke.Common.Tools.GitVersion;
 using Nuke.Common.Utilities.Collections;
+using OctoVersion.Core;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
+using static Nuke.Common.IO.CompressionTasks;
+using Nuke.OctoVersion;
 
 [CheckBuildProjectConfigurations]
 [UnsetVisualStudioEnvironmentVariables]
 class Build : NukeBuild
 {
-    [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
-    readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
+    readonly Configuration Configuration = Configuration.Release;
 
     [Solution] readonly Solution Solution;
 
-    GitVersion GitVersion;
+    [NukeOctoVersion] readonly OctoVersionInfo OctoVersionInfo;
 
     AbsolutePath SourceDirectory => RootDirectory / "source";
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
@@ -41,13 +42,7 @@ class Build : NukeBuild
     Target CalculateVersion => _ => _
         .Executes(() =>
         {
-            GitVersion = GitVersionTasks
-                .GitVersion(s => s
-                    .SetTargetPath(".")
-                    .SetNoFetch(true)
-                    .SetFramework("netcoreapp3.0")
-                )
-                .Result;
+            //all the magic happens inside `[NukeOctoVersion]` above. we just need a target for TeamCity to call
         });
 
     Target Compile => _ => _
@@ -56,15 +51,14 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() =>
         {
-            Logger.Info("Building Octopus.RoslynAnalyzers v{0}", GitVersion.FullSemVer);
-            Logger.Info("Informational Version {0}", GitVersion.InformationalVersion);
+            Logger.Info("Building Octopus.RoslynAnalyzers v{0}", OctoVersionInfo.FullSemVer);
 
             DotNetBuild(_ => _
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
-                .SetAssemblyVersion(GitVersion.AssemblySemVer)
-                .SetFileVersion(GitVersion.AssemblySemFileVer)
-                .SetInformationalVersion(GitVersion.InformationalVersion)
+                .SetAssemblyVersion(OctoVersionInfo.MajorMinorPatch)
+                .SetFileVersion(OctoVersionInfo.MajorMinorPatch)
+                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
                 .EnableNoRestore());
         });
 
@@ -92,7 +86,7 @@ class Build : NukeBuild
                 .SetConfiguration(Configuration)
                 .SetOutputDirectory(ArtifactsDirectory)
                 .SetNoBuild(true)
-                .AddProperty("Version", GitVersion.FullSemVer)
+                .AddProperty("Version", OctoVersionInfo.FullSemVer)
             );
         });
 
@@ -102,7 +96,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             EnsureExistingDirectory(LocalPackagesDirectory);
-            CopyFileToDirectory(ArtifactsDirectory / $"Octopus.RoslynAnalyzers.{GitVersion.FullSemVer}.nupkg", LocalPackagesDirectory, FileExistsPolicy.Overwrite);
+            CopyFileToDirectory(ArtifactsDirectory / $"Octopus.RoslynAnalyzers.{OctoVersionInfo.FullSemVer}.nupkg", LocalPackagesDirectory, FileExistsPolicy.Overwrite);
         });
 
     Target Default => _ => _
