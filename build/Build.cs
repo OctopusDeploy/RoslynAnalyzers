@@ -13,11 +13,20 @@ using static Nuke.Common.Tools.DotNet.DotNetTasks;
 [UnsetVisualStudioEnvironmentVariables]
 class Build : NukeBuild
 {
+    const string CiBranchNameEnvVariable = "OCTOVERSION_CurrentBranch";
+
     readonly Configuration Configuration = Configuration.Release;
 
     [Solution] readonly Solution Solution;
+    
+    [Parameter("Whether to auto-detect the branch name - this is okay for a local build, but should not be used under CI.")] 
+    readonly bool AutoDetectBranch = IsLocalBuild;
+    
+    [Parameter("Branch name for OctoVersion to use to calculate the version number. Can be set via the environment variable " + CiBranchNameEnvVariable + ".", Name = CiBranchNameEnvVariable)]
+    string BranchName { get; set; }
 
-    [OctoVersion] readonly OctoVersionInfo OctoVersionInfo;
+    [OctoVersion(BranchParameter = nameof(BranchName), AutoDetectBranchParameter = nameof(AutoDetectBranch))] 
+    public OctoVersionInfo OctoVersionInfo;
 
     AbsolutePath SourceDirectory => RootDirectory / "source";
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
