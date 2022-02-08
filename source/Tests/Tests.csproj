@@ -20,6 +20,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis" Version="3.8.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.NUnit" Version="1.0.1-beta1.21064.2" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.NUnit" Version="1.0.1-beta1.21064.2" />
+    <PackageReference Include="xunit.core" Version="2.4.1" />
   </ItemGroup>
 
   <ItemGroup>
