@@ -23,13 +23,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_", "_", "{06CE9746-01A4-41
 		..\readme.md = ..\readme.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{54B3DEDC-9D11-4D9F-BCE2-8A6CE55774D8}"
-ProjectSection(SolutionItems) = preProject
-	..\build\.editorconfig = ..\build\.editorconfig
-	..\build\_build.csproj = ..\build\_build.csproj
-	..\build\_build.csproj.DotSettings = ..\build\_build.csproj.DotSettings
-	..\build\Build.cs = ..\build\Build.cs
-EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "_build", "..\build\_build.csproj", "{469E5392-F710-472A-9613-A9E0914032D1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +39,8 @@ Global
 		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F6A719A-C9EA-4836-80B9-A8FAD870031E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{469E5392-F710-472A-9613-A9E0914032D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{469E5392-F710-472A-9613-A9E0914032D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
