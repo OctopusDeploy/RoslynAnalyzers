@@ -14,7 +14,7 @@ namespace Octopus.RoslynAnalyzers
 
         const string Title = "\"Using\" declarations encourage holding onto IDisposable's for longer than needed";
 
-        const string MessageFormat = "Please use braces to specify the scope of the \"Using\" statement instead";
+        const string MessageFormat = "\"Using\" declarations encourage holding onto IDisposable's for longer than needed, please use braces to specify the scope of the \"Using\" statement instead";
         const string Category = "Octopus";
 
         const string Description = @"""Using"" declarations (without braces to specify the scope) have been sources of bugs where IDisposable's are held longer than needed. 
