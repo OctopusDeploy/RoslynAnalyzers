@@ -20,7 +20,7 @@ namespace Octopus.RoslynAnalyzers
         const string Description = @"""Using"" declarations (without braces to specify the scope) have been sources of bugs where IDisposable's are held longer than needed. 
 The problem is especially tricky if long running code is added to the function AFTER the ""using"" declaration is written.
 
-This is This analyzer bans their usage.";
+This analyzer bans their usage.";
 
         internal static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
