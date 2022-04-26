@@ -12,12 +12,15 @@ namespace Octopus.RoslynAnalyzers
     {
         const string DiagnosticId = "Octopus_UsingDeclaration";
 
-        const string Title = "USING declarations are prone to errors";
+        const string Title = "\"Using\" declarations encourage holding onto IDisposable's for longer than needed";
 
-        const string MessageFormat = "The USING declaration without braces is prone to errors";
+        const string MessageFormat = "Please use braces to specify the scope of the \"Using\" statement instead";
         const string Category = "Octopus";
 
-        const string Description = @"USING declarations have been sources of bugs where transactions are held longer than needed. This analyzer bans their usage.";
+        const string Description = @"""Using"" declarations (without braces to specify the scope) have been sources of bugs where IDisposable's are held longer than needed. 
+The problem is especially tricky if long running code is added to the function AFTER the ""using"" declaration is written.
+
+This is This analyzer bans their usage.";
 
         internal static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,

@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.Text;
 using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
 using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.UsingDeclarationAnalyzer>;
@@ -10,7 +9,28 @@ namespace Tests
 {
     public class UsingDeclarationAnalyzerFixture
     {
-        static string usingBlock = @"
+        [Test]
+        public async Task DetectsUsingDeclaration()
+        {
+            var result = new DiagnosticResult(UsingDeclarationAnalyzer.Rule)
+                .WithSpan("", 10, 13, 10 ,42);
+
+            await Verify.VerifyAnalyzerAsync(UsingDeclaration, result);
+        }
+
+        [Test]
+        public async Task IgnoresUsingBlockWithBraces()
+        {
+            await Verify.VerifyAnalyzerAsync(UsingBlockWithBraces);
+        }
+
+        [Test]
+        public async Task IgnoresUsingBlockWithoutBraces()
+        {
+            await Verify.VerifyAnalyzerAsync(UsingBlockWithoutBraces);
+        }
+
+        const string UsingBlockWithBraces = @"
 using System;
 
 namespace TheNamespace
@@ -21,25 +41,46 @@ namespace TheNamespace
         {
             using (var boo = new BooDis())
             {
-                int foo = 5;
+                Console.Write(3);
             }
 
-            var bar = 7;
+            Console.Write(7);
         }
-
 
         class BooDis : IDisposable
         {
             public void Dispose()
             {
-
             }
         }
     }       
-}
-";
+}";
 
-        static string usingDeclaration = @"
+        const string UsingBlockWithoutBraces = @"
+using System;
+
+namespace TheNamespace
+{
+    public class FooBar
+    {
+        public void Baz()
+        {
+            using (var boo = new BooDis())
+                Console.Write(3);
+
+            Console.Write(7);
+        }
+
+        class BooDis : IDisposable
+        {
+            public void Dispose()
+            {
+            }
+        }
+    }       
+}";
+
+        const string UsingDeclaration = @"
 using System;
 
 namespace TheNamespace
@@ -50,41 +91,20 @@ namespace TheNamespace
         {
             using var yah = new BooDis();
             {
-                int foo = 5;
+                Console.Write(3);
             }
 
-            var bar = 7;
+            Console.Write(7);
         }
-
 
         class BooDis : IDisposable
         {
             public void Dispose()
             {
-
             }
         }
     }       
-}
-";
-        [Test]
-        public async Task DetectsEnumParseThatDoesNotSpecifyTheCasing()
-        {
-            var source = usingDeclaration;
-
-            var result = new DiagnosticResult(UsingDeclarationAnalyzer.Rule)
-                .WithSpan("", 10, 13, 10 ,42);
-
-            await Verify.VerifyAnalyzerAsync(source, result);
-        }
-
-        [Test]
-        public async Task IgnoresEnumParseThatDoesSpecifiesTheCasing()
-        {
-            var source = usingBlock;
-
-            await Verify.VerifyAnalyzerAsync(source);
-        }
+}";
     }
 }
 
