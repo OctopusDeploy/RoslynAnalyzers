@@ -9,70 +9,52 @@ namespace Tests
 {
     public class ReassigningMemberVariablesInBuilderAnalyzerFixture
     {
-        [Test]
-        public async Task ShouldNotAllowAssignmentBackToMemberVariable()
+        [TestCase("{|#0:Age ??= new AgeClass()|};")]
+        [TestCase("{|#0:Age.age = 1|};")]
+        public async Task ShouldNotAllowAssignmentBackToMemberVariable(string line)
         {
-            const string source = @"
-namespace TheNamespace
-{
-    public class SomethingSomethingBuilder
-    {
-        public int? Age {get; private set;}
-
-        public SomethingSomethingBuilder WithAge(int age)
-        {
-            Age = age;
-            return this;
-        }
-
-        public int? Build()
-        {
-            {|#0:Age ??= 10|};
-            return Age;
-        }
-    }
-}
-";
-
-            var result = new DiagnosticResult(BuildersReassigningToMemberVariablesAnalyzer.Rule).WithLocation(0); 
+            var source = GetSource(line);
+            var result = new DiagnosticResult(BuildersReassigningToMemberVariablesAnalyzer.Rule).WithLocation(0);
             await Verify.VerifyAnalyzerAsync(source, result);
         }
-        
-        [Test]
-        public async Task ShouldAllowReassignmentOfLocalVariables()
+
+        [TestCase("var someOtherLocalVariable = 10;\n" + "someOtherLocalVariable = 5;")]
+        [TestCase("var someAge = new AgeClass();\nsomeAge.age = 1;")]
+        public async Task ShouldAllowReassignmentOfLocalVariables(string line)
         {
-            const string source = @"
+            var source = GetSource(line);
+            await Verify.VerifyAnalyzerAsync(source);
+        }
+
+        static string GetSource(string line)
+        {
+            string source = @"
 namespace TheNamespace
 {
     public class SomethingSomethingBuilder
     {
-        class SomeClass
+        public class AgeClass
         {   
-            public int X = 10;
+            public int age = 10;
         }
 
-        public int? Age {get; private set;}
+        public AgeClass? Age {get; private set;}
 
-        public SomethingSomethingBuilder WithAge(int age)
+        public SomethingSomethingBuilder WithAge(AgeClass age)
         {
             Age = age;
             return this;
         }
 
-        public int? Build()
+        public AgeClass? Build()
         {
-            var someOtherLocalVariable = 10;
-            someOtherLocalVariable = 5;
-            var someVector = new SomeClass();
-            someVector.X = 1;
+            " + line + @"
             return Age;
         }
     }
 }
 ";
-            await Verify.VerifyAnalyzerAsync(source);
+            return source;
         }
-        
-        
     }
 }
