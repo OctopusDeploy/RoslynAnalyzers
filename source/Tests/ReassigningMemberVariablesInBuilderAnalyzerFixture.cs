@@ -26,12 +26,19 @@ namespace Tests
             await Verify.VerifyAnalyzerAsync(source);
         }
 
-        static string GetSource(string line)
+        [Test]
+        public async Task ShouldOnlyApplyRulesToClassesThatEndInBuilder()
+        {
+            var source = GetSource("Age ??= new AgeClass();", "NonBuilderClass");
+            await Verify.VerifyAnalyzerAsync(source);
+        }
+
+        static string GetSource(string line, string className = "SomethingSomethingBuilder")
         {
             string source = @"
 namespace TheNamespace
 {
-    public class SomethingSomethingBuilder
+    public class " + className + @"
     {
         public class AgeClass
         {   
@@ -40,7 +47,7 @@ namespace TheNamespace
 
         public AgeClass? Age {get; private set;}
 
-        public SomethingSomethingBuilder WithAge(AgeClass age)
+        public " + className + @" WithAge(AgeClass age)
         {
             Age = age;
             return this;

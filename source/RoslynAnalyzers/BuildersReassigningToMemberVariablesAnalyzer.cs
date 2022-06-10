@@ -43,7 +43,10 @@ namespace Octopus.RoslynAnalyzers
         {
             if (!(context.Node is MethodDeclarationSyntax { Body: { }, Identifier: { Value: "Build" } } method))
                 return;
-            
+
+            if (!(method.Parent is ClassDeclarationSyntax classDeclarationSyntax) || !classDeclarationSyntax.Identifier.ValueText.EndsWith("Builder"))
+                return;
+
             var localVariables = method.Body.Statements
                 .Where(x => x is LocalDeclarationStatementSyntax)
                 .Cast<LocalDeclarationStatementSyntax>()
