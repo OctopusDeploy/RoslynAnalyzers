@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -33,12 +32,12 @@ namespace Octopus.RoslynAnalyzers
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterSyntaxNodeAction(CheckNaming, SyntaxKind.MethodDeclaration);
+            context.RegisterSyntaxNodeAction(CheckAssignmentsInMethod, SyntaxKind.MethodDeclaration);
         }
 
-        static void CheckNaming(SyntaxNodeAnalysisContext context)
+        static void CheckAssignmentsInMethod(SyntaxNodeAnalysisContext context)
         {
-            if (!(context.Node is MethodDeclarationSyntax { Body: { }, Identifier: { Value: "Build" } } method))
+            if (!(context.Node is MethodDeclarationSyntax { Body: { }, Identifier: { ValueText: "Build" } } method))
                 return;
 
             if (!(method.Parent is ClassDeclarationSyntax classDeclarationSyntax) || !classDeclarationSyntax.Identifier.ValueText.EndsWith("Builder"))
@@ -51,24 +50,25 @@ namespace Octopus.RoslynAnalyzers
                 .SelectMany(x => x.ChildNodes())
                 .Where(syntaxNode => syntaxNode is VariableDeclaratorSyntax)
                 .Cast<VariableDeclaratorSyntax>()
-                .Select(x => x.Identifier.Value)
-                .ToList();
+                .Select(x => x.Identifier.ValueText)
+                .ToImmutableHashSet();
                 
             var assignmentStatements = method.Body.Statements
                 .Where(x => x is ExpressionStatementSyntax)
                 .Select(expressionStatementSyntax => ((ExpressionStatementSyntax)expressionStatementSyntax).Expression)
                 .Where(expression => expression is AssignmentExpressionSyntax)
                 .Cast<AssignmentExpressionSyntax>();
-
+            
             foreach (var assignmentStatement in assignmentStatements)
             {
                 switch (assignmentStatement.Left)
                 {
                     //Local variable property modification, let's allow modification to it as it doesn't modify the state of the builder
-                    case IdentifierNameSyntax left when localVariables.Contains(left.Identifier.Value):
+                    //eg. someLocalVariable = 5; 
+                    case IdentifierNameSyntax left when localVariables.Contains(left.Identifier.ValueText):
                     //Local variable, let's allow re-assignment to it as it doesn't modify the state of the builder
-                    case MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax identifier } when localVariables.Contains(identifier.Identifier.Value):
-                        continue;
+                    //eg. cracken.a.x.x.x.x.gold = 1; 
+                    case MemberAccessExpressionSyntax memberAccessExpressionSyntax when localVariables.Contains(FindIdentifierName(memberAccessExpressionSyntax)):
                     // Parenthesized Variable Design eg. var (a, b) = (1, 2)
                     case DeclarationExpressionSyntax { Designation: ParenthesizedVariableDesignationSyntax _ }:
                         continue;
@@ -80,6 +80,18 @@ namespace Octopus.RoslynAnalyzers
                     }
                 }
             }
+        }
+
+        static string FindIdentifierName(MemberAccessExpressionSyntax memberAccessExpressionSyntax, int count = 0)
+        {
+            if (count >= 100) return string.Empty;
+            
+            return memberAccessExpressionSyntax.Expression switch
+            {
+                MemberAccessExpressionSyntax childMemberAccessExpressionSyntax => FindIdentifierName(childMemberAccessExpressionSyntax, ++count),
+                IdentifierNameSyntax identifierNameSyntax => identifierNameSyntax.Identifier.ValueText,
+                _ => string.Empty
+            };
         }
     }
 }
