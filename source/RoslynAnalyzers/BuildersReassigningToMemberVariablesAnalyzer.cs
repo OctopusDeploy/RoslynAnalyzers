@@ -41,16 +41,35 @@ namespace Octopus.RoslynAnalyzers
 
         static void CheckNaming(SyntaxNodeAnalysisContext context)
         {
-            if (context.Node is MethodDeclarationSyntax { Body: { }, Identifier: { Value: "Build" } } method)
-            {
-                var expressionStatements = method.Body.Statements.Where(x => x is ExpressionStatementSyntax).Cast<ExpressionStatementSyntax>();
-                var assignmentStatements = expressionStatements.Where(x => x.Expression is AssignmentExpressionSyntax);
+            if (!(context.Node is MethodDeclarationSyntax { Body: { }, Identifier: { Value: "Build" } } method))
+                return;
+            
+            var localVariables = method.Body.Statements
+                .Where(x => x is LocalDeclarationStatementSyntax)
+                .Cast<LocalDeclarationStatementSyntax>()
+                .Select(x => x.Declaration)
+                .SelectMany(x => x.ChildNodes())
+                .Where(syntaxNode => syntaxNode is VariableDeclaratorSyntax)
+                .Cast<VariableDeclaratorSyntax>()
+                .Select(x => x.Identifier.Value)
+                .ToList();
+                
+            var assignmentStatements = method.Body.Statements
+                .Where(x => x is ExpressionStatementSyntax)
+                .Select(expressionStatementSyntax => ((ExpressionStatementSyntax)expressionStatementSyntax).Expression)
+                .Where(expression => expression is AssignmentExpressionSyntax)
+                .Cast<AssignmentExpressionSyntax>();
 
-                foreach (var assignmentStatement in assignmentStatements)
+            foreach (var assignmentStatement in assignmentStatements)
+            {
+                if (assignmentStatement.Left is IdentifierNameSyntax left && localVariables.Contains(left.Identifier.Value))
                 {
-                    var diagnostic = Diagnostic.Create(Rule, assignmentStatement.GetLocation());
-                    context.ReportDiagnostic(diagnostic);
+                    //Local variable, let's allow reassignment to it as it doesn't modify the state of the builder
+                    continue;
                 }
+
+                var diagnostic = Diagnostic.Create(Rule, assignmentStatement.GetLocation());
+                context.ReportDiagnostic(diagnostic);
             }
         }
 

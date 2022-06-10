@@ -9,7 +9,36 @@ namespace Tests
     public class ReassigningMemberVariablesInBuilderAnalyzerFixture
     {
         [Test]
-        public async Task ShouldNotAllow()
+        public async Task ShouldNotAllowAssignmentBackToMemberVariable()
+        {
+            const string source = @"
+namespace TheNamespace
+{
+    public class SomethingSomethingBuilder
+    {
+        public int? Age {get; private set;}
+
+        public SomethingSomethingBuilder WithAge(int age)
+        {
+            Age = age;
+            return this;
+        }
+
+        public int? Build()
+        {
+            {|#0:Age ??= 10|};
+            return Age;
+        }
+    }
+}
+";
+
+            var result = new DiagnosticResult(BuildersReassigningToMemberVariablesAnalyzer.Rule).WithLocation(0); 
+            await Verify.VerifyAnalyzerAsync(source, result);
+        }
+        
+        [Test]
+        public async Task ShouldAllowReassignmentOfLocalVariables()
         {
             const string source = @"
 namespace TheNamespace
@@ -27,15 +56,14 @@ namespace TheNamespace
         public int? Build()
         {
             var someOtherLocalVariable = 10;
-            {|#0:Age ??= 10;|}
+            someOtherLocalVariable = 5;
             return Age;
         }
     }
 }
 ";
 
-            var result = new DiagnosticResult(BuildersReassigningToMemberVariablesAnalyzer.Rule).WithLocation(0); 
-            await Verify.VerifyAnalyzerAsync(source, result);
+            await Verify.VerifyAnalyzerAsync(source);
         }
     }
 }
