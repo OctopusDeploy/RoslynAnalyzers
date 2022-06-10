@@ -13,12 +13,10 @@ namespace Octopus.RoslynAnalyzers
     {
         const string DiagnosticId = "Octopus_PreventBuildersReassigningToMemberVariablesFromBuild";
 
-        const string Title = "Reassigning of member variable in builder";
+        const string Title = "Builders should not assign state during the Build method";
 
-        const string MessageFormat = "Builders should be state bags and not reassign values back to the state when building";
+        const string MessageFormat = "Builders should not re-assign back to their state when using the Build method. A builder should be able to be called multiple times, each successfully creating a new instance from the supplied properties. Consider creating a local variable and assigning the member value to it to use during the Build method.";
         const string Category = "Octopus";
-
-        const string Description = @"What goes here?.";
 
         internal static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
@@ -26,8 +24,7 @@ namespace Octopus.RoslynAnalyzers
             MessageFormat,
             Category,
             DiagnosticSeverity.Error,
-            true,
-            Description
+            true
         );
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
@@ -65,22 +62,24 @@ namespace Octopus.RoslynAnalyzers
 
             foreach (var assignmentStatement in assignmentStatements)
             {
-                
-                if (assignmentStatement.Left is IdentifierNameSyntax left && localVariables.Contains(left.Identifier.Value))
+                switch (assignmentStatement.Left)
                 {
-                    //Local variable, let's allow reassignment to it as it doesn't modify the state of the builder
-                    continue;
+                    //Local variable property modification, let's allow modification to it as it doesn't modify the state of the builder
+                    case IdentifierNameSyntax left when localVariables.Contains(left.Identifier.Value):
+                    //Local variable, let's allow re-assignment to it as it doesn't modify the state of the builder
+                    case MemberAccessExpressionSyntax { Expression: IdentifierNameSyntax identifier } when localVariables.Contains(identifier.Identifier.Value):
+                        continue;
+                    // Parenthesized Variable Design eg. var (a, b) = (1, 2)
+                    case DeclarationExpressionSyntax { Designation: ParenthesizedVariableDesignationSyntax _ }:
+                        continue;
+                    default:
+                    {
+                        var diagnostic = Diagnostic.Create(Rule, assignmentStatement.GetLocation());
+                        context.ReportDiagnostic(diagnostic);
+                        break;
+                    }
                 }
-                if (assignmentStatement.Left is MemberAccessExpressionSyntax memberAccessExpression && memberAccessExpression.Expression is IdentifierNameSyntax identifier && localVariables.Contains(identifier.Identifier.Value))
-                {
-                    //Local variable, let's allow reassignment to it as it doesn't modify the state of the builder
-                    continue;
-                }
-
-                var diagnostic = Diagnostic.Create(Rule, assignmentStatement.GetLocation());
-                context.ReportDiagnostic(diagnostic);
             }
         }
-
     }
 }

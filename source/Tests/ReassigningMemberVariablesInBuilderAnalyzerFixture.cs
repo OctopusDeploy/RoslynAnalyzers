@@ -10,6 +10,7 @@ namespace Tests
     public class ReassigningMemberVariablesInBuilderAnalyzerFixture
     {
         [TestCase("{|#0:Age ??= new AgeClass()|};")]
+        [TestCase("{|#0:Age = new AgeClass()|};")]
         [TestCase("{|#0:Age.age = 1|};")]
         public async Task ShouldNotAllowAssignmentBackToMemberVariable(string line)
         {
@@ -20,6 +21,8 @@ namespace Tests
 
         [TestCase("var someOtherLocalVariable = 10;\n" + "someOtherLocalVariable = 5;")]
         [TestCase("var someAge = new AgeClass();\nsomeAge.age = 1;")]
+        [TestCase("var (a, b) = (1, 2);")]
+        [TestCase("var (a, b, c, d) = (1, 2, 3, 4);")]
         public async Task ShouldAllowReassignmentOfLocalVariables(string line)
         {
             var source = GetSource(line);
