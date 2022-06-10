@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Testing;
 using NUnit.Framework;
@@ -45,6 +46,11 @@ namespace TheNamespace
 {
     public class SomethingSomethingBuilder
     {
+        class SomeClass
+        {   
+            public int X = 10;
+        }
+
         public int? Age {get; private set;}
 
         public SomethingSomethingBuilder WithAge(int age)
@@ -57,13 +63,16 @@ namespace TheNamespace
         {
             var someOtherLocalVariable = 10;
             someOtherLocalVariable = 5;
+            var someVector = new SomeClass();
+            someVector.X = 1;
             return Age;
         }
     }
 }
 ";
-
             await Verify.VerifyAnalyzerAsync(source);
         }
+        
+        
     }
 }

@@ -62,7 +62,13 @@ namespace Octopus.RoslynAnalyzers
 
             foreach (var assignmentStatement in assignmentStatements)
             {
+                
                 if (assignmentStatement.Left is IdentifierNameSyntax left && localVariables.Contains(left.Identifier.Value))
+                {
+                    //Local variable, let's allow reassignment to it as it doesn't modify the state of the builder
+                    continue;
+                }
+                if (assignmentStatement.Left is MemberAccessExpressionSyntax memberAccessExpression && memberAccessExpression.Expression is IdentifierNameSyntax identifier && localVariables.Contains(identifier.Identifier.Value))
                 {
                     //Local variable, let's allow reassignment to it as it doesn't modify the state of the builder
                     continue;
