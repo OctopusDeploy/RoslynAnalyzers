@@ -46,23 +46,6 @@ namespace Octopus.RoslynAnalyzers
             noBaseClassesDescription
         );
 
-        public static DiagnosticDescriptor Oct2003SingleIntegrationTestInEachClass => GetTestAnalyzerDescriptor(
-            "OCT2003",
-            "Integration test classes should only contain 1 test",
-            "xUnit can only run tests in parallel if they are all in different classes (check out " +
-            "more about xUnit parallelization here: https://xunit.net/docs/running-tests-in-parallel). To make " +
-            "sure we can have the fastest running integration tests in all the land, only have a single integration " +
-            "test per class. If your test classes are getting a little messy, add some nested classes to " +
-            "keep things organised." +
-            Environment.NewLine +
-            "If you need to share setup logic between tests (and now don't have a shared constructor to do that in), " +
-            "try and make use of the builders, or put together some custom helper or test context classes. If the " +
-            "setup is expensive and you need to share context between multiple tests, IClassFixture and IAssemblyFixture" +
-            "might be your answer: https://xunit.net/docs/shared-context." +
-            Environment.NewLine +
-            "Reach out to @team-core-blue if you need any help with this."
-        );
-
         public static DiagnosticDescriptor Oct2004IntegrationTestContainerClassMustBeStatic => GetTestAnalyzerDescriptor(
             "OCT2004",
             "Integration test container class should be static",

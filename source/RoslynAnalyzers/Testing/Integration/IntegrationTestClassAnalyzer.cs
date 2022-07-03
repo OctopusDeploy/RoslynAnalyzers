@@ -10,8 +10,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
     public class IntegrationTestClassAnalyzer : OctopusTestingDiagnosticAnalyzer<INamedTypeSymbol>
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
-            Descriptors.Oct2001NoIntegrationTestBaseClasses,
-            Descriptors.Oct2003SingleIntegrationTestInEachClass
+            Descriptors.Oct2001NoIntegrationTestBaseClasses
         );
 
         internal override void AnalyzeCompilation(INamedTypeSymbol classSymbol, SymbolAnalysisContext context, OctopusTestingContext octopusTestingContext)
@@ -24,20 +23,6 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
             if (!classSymbol.DirectlyInheritsFrom(octopusTestingContext.IntegrationTestType))
             {
                 context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2001NoIntegrationTestBaseClasses, classSymbol.Locations.First()));
-            }
-
-            var testMethodSymbols = classSymbol
-                .GetMembers()
-                .OfType<IMethodSymbol>()
-                .Where(m => m.GetAttributes().Any(a => a.AttributeClass.IsAssignableTo(octopusTestingContext.FactAttributeType)))
-                .ToArray();
-
-            if (testMethodSymbols.Length > 1)
-            {
-                foreach (var testMethodSymbol in testMethodSymbols)
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2003SingleIntegrationTestInEachClass, testMethodSymbol.Locations.First()));
-                }
             }
         }
     }
