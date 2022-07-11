@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>8</LangVersion>
     <DisableImplicitPackageTargetFallback>true</DisableImplicitPackageTargetFallback>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <nullable>enable</nullable>
   </PropertyGroup>
 
