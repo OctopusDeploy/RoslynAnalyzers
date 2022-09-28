@@ -8,6 +8,8 @@ namespace Tests.Testing
         {
             return $@"
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Octopus.IntegrationTests
 {{
@@ -16,7 +18,11 @@ namespace Octopus.IntegrationTests
         public void Dispose() {{ }}
     }}
 
-    public abstract class IntegrationTest : LoggedTest {{ }}
+    public abstract class IntegrationTest : LoggedTest 
+    {{ 
+        readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        public CancellationToken CancellationToken => cancellationTokenSource.Token;
+    }}
 
     public abstract class UnitTest : LoggedTest {{ }}
 }}
