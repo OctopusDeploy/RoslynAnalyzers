@@ -79,11 +79,11 @@ namespace Octopus.RoslynAnalyzers
         {
             return new DiagnosticDescriptor("OCT2008",
                 "Integration test container classes should forward the 'CancellationToken' to methods that take one",
-                "Cancellation Token is defined in integration test base class. Container classes should forward the 'CancellationToken' to methods that take one",
+                "Cancellation Token is defined in IntegrationTest base class. Container classes should forward the 'CancellationToken' to methods that take one",
                 "Octopus.Testing",
                 DiagnosticSeverity.Info,
                 false, // Testing analysers are disabled by default, these will only be enabled for test projects
-                "Forward the 'CancellationToken' parameter to methods that take one to ensure the operation cancellation notifications gets properly propagated, " 
+                "Forward the CancellationToken property to compatible methods to ensure cancellation notifications get properly propagated,"
                 + "or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token.");
         }
     }
