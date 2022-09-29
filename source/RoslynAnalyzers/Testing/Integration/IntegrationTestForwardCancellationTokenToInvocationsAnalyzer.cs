@@ -9,13 +9,14 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Octopus.RoslynAnalyzers.Testing.Integration
 {
     /// <summary>
-    /// Specific analyzer for Octopus Integration Test container classes.
-    /// This will show "information" hint when method call can forward CancellationToken, but hasn't.
+    /// Hint when integration test method calls could take an inherited CancellationToken.
+    /// </summary>
+    /// <remarks>
     /// For Octopus Integration Test, CancellationToken is defined in the base class.
     /// The existing dotnet analyzer, CA2016, handle cases where CancellationToken is found on the method context / containing class, but
     /// not when definition is in parent class. (IE: IntegrationTest)
     /// This implementation is based (heavily) on CA2016 implementation. (https://github.com/dotnet/roslyn-analyzers/pull/3641)
-    /// </summary>
+    /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class IntegrationTestForwardCancellationTokenToInvocationsAnalyzer : DiagnosticAnalyzer
     {
@@ -30,7 +31,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
             analysisContext.RegisterCompilationStartAction(AnalyzeCompilationStart);
         }
 
-        void AnalyzeCompilationStart(CompilationStartAnalysisContext compilationStartAnalysisContext)
+        static void AnalyzeCompilationStart(CompilationStartAnalysisContext compilationStartAnalysisContext)
         {
             compilationStartAnalysisContext.RegisterOperationAction(
                 context =>
@@ -63,7 +64,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                         InvocationMethodHasCancellationTokenOverload(method, cancellationTokenType, genericTaskType, genericValueTaskType))
                     {
                         SyntaxNode? nodeToDiagnose = GetInvocationMethodNameNode(context.Operation.Syntax) ?? context.Operation.Syntax;
-                        context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2008IntegrationTestForwardCancellationTokenToInvocations(), nodeToDiagnose.GetLocation()));
+                        context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2008IntegrationTestForwardCancellationTokenToInvocations(), nodeToDiagnose?.GetLocation()));
                     }
                 },
                 OperationKind.Invocation
@@ -83,9 +84,9 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
 
         static (INamedTypeSymbol? cancellationTokenType, INamedTypeSymbol? genericTaskType, INamedTypeSymbol? genericValueTaskType) GetWellKnownTypes(OperationAnalysisContext context)
         {
-            INamedTypeSymbol? cancellationTokenType = context.Compilation.GetTypeByMetadataName(Constants.Types.SystemThreadingCancellationToken);
-            INamedTypeSymbol? genericTaskType = context.Compilation.GetTypeByMetadataName(Constants.Types.SystemThreadingTasksTask1);
-            INamedTypeSymbol? genericValueTaskType = context.Compilation.GetTypeByMetadataName(Constants.Types.SystemThreadingTasksValueTask1);
+            var cancellationTokenType = context.Compilation.GetTypeByMetadataName(Constants.Types.SystemThreadingCancellationToken);
+            var genericTaskType = context.Compilation.GetTypeByMetadataName(Constants.Types.SystemThreadingTasksTask1);
+            var genericValueTaskType = context.Compilation.GetTypeByMetadataName(Constants.Types.SystemThreadingTasksValueTask1);
 
             return (cancellationTokenType, genericTaskType, genericValueTaskType);
         }
@@ -106,7 +107,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
         static bool IsCancellationTokenAlreadyForwarded(ImmutableArray<IArgumentOperation> invocationArguments, INamedTypeSymbol? cancellationTokenType)
         {
             // Scanning argument for explicitly declared cancellation token type. We want to show diagnostic for implicit (default / optional) case.
-            return AnyArgument(invocationArguments, argument => SymbolEqualityComparer.Default.Equals(argument.Parameter.Type, cancellationTokenType) && !argument.IsImplicit);
+            return AnyArgument(invocationArguments, argument => SymbolEqualityComparer.Default.Equals(argument.Parameter?.Type, cancellationTokenType) && !argument.IsImplicit);
         }
 
         // Checks if the invocation has an optional ct argument at the end.
@@ -132,7 +133,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                 // Need to check among all arguments in case the user is passing them named and unordered (despite the ct being defined as the last parameter)
                 return AnyArgument(
                     arguments,
-                    a => SymbolEqualityComparer.Default.Equals(a.Parameter.Type, cancellationTokenType) && a.ArgumentKind == ArgumentKind.DefaultValue
+                    a => SymbolEqualityComparer.Default.Equals(a.Parameter?.Type, cancellationTokenType) && a.ArgumentKind == ArgumentKind.DefaultValue
                 );
             }
 
@@ -143,8 +144,8 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
         static bool InvocationMethodHasCancellationTokenOverload(
             IMethodSymbol method,
             ISymbol cancellationTokenType,
-            INamedTypeSymbol? genericTask,
-            INamedTypeSymbol? genericValueTask)
+            ISymbol? genericTask,
+            ISymbol? genericValueTask)
         {
             var overload = method.ContainingType
                 .GetMembers(method.Name)
@@ -164,8 +165,8 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
             // Checks if the parameters of the two passed methods only differ in a ct.
             static bool HasSameParametersPlusCancellationToken(
                 ISymbol cancellationTokenType,
-                INamedTypeSymbol? genericTask,
-                INamedTypeSymbol? genericValueTask,
+                ISymbol? genericTask,
+                ISymbol? genericValueTask,
                 IMethodSymbol originalMethod,
                 IMethodSymbol methodToCompare)
             {
@@ -198,25 +199,22 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                     }
                 }
 
-                // Overload is valid if its return type is implicitly convertable
+                // Overload is valid if its return type is implicitly convertible
                 var toCompareReturnType = methodToCompareWithAllParameters.ReturnType;
                 var originalReturnType = originalMethodWithAllParameters.ReturnType;
-                if (!toCompareReturnType.IsAssignableTo(originalReturnType))
-                {
-                    // Generic Task-like types are special since awaiting them essentially erases the task-like type.
-                    // If both types are Task-like we will warn if their generic arguments are convertable to each other.
-                    if (IsTaskLikeType(originalReturnType) && IsTaskLikeType(toCompareReturnType) &&
-                        originalReturnType is INamedTypeSymbol originalNamedType &&
-                        toCompareReturnType is INamedTypeSymbol toCompareNamedType &&
-                        TypeArgumentsAreConvertable(originalNamedType, toCompareNamedType))
-                    {
-                        return true;
-                    }
 
-                    return false;
+                if (toCompareReturnType.IsAssignableTo(originalReturnType))
+                {
+                    return true;
                 }
 
-                return true;
+                // Generic Task-like types are special since awaiting them essentially erased the task-like type.
+                // If both types are Task-like we will warn if their generic arguments are convertible to each other.
+                return IsTaskLikeType(originalReturnType) &&
+                    IsTaskLikeType(toCompareReturnType) &&
+                    originalReturnType is INamedTypeSymbol originalNamedType &&
+                    toCompareReturnType is INamedTypeSymbol toCompareNamedType &&
+                    TypeArgumentsAreConvertible(originalNamedType, toCompareNamedType);
 
                 bool IsTaskLikeType(ITypeSymbol typeSymbol)
                 {
@@ -226,16 +224,10 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                         return true;
                     }
 
-                    if (genericValueTask != null &&
-                        SymbolEqualityComparer.Default.Equals(typeSymbol.OriginalDefinition, genericValueTask))
-                    {
-                        return true;
-                    }
-
-                    return false;
+                    return genericValueTask != null && SymbolEqualityComparer.Default.Equals(typeSymbol.OriginalDefinition, genericValueTask);
                 }
 
-                bool TypeArgumentsAreConvertable(INamedTypeSymbol left, INamedTypeSymbol right)
+                bool TypeArgumentsAreConvertible(INamedTypeSymbol left, INamedTypeSymbol right)
                 {
                     // left and right return type should be consistent.
                     if (left.Arity != 1 ||
@@ -247,6 +239,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
 
                     var leftTypeArgument = left.TypeArguments.FirstOrDefault();
                     var rightTypeArgument = right.TypeArguments.FirstOrDefault();
+
                     return leftTypeArgument != null && rightTypeArgument != null && leftTypeArgument.GetType().IsInstanceOfType(rightTypeArgument);
                 }
             }
