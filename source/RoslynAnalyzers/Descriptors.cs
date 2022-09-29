@@ -74,5 +74,17 @@ namespace Octopus.RoslynAnalyzers
             "Integration test container classes should only be used to organise tests (because we must have 1 test per class for maximum parallel goodness,"
             + " any logic that you want to share across multiple tests should be in builders, class/assembly fixtures, or some other generic helper."
         );
+        
+        public static DiagnosticDescriptor Oct2008IntegrationTestForwardCancellationTokenToInvocations()
+        {
+            return new DiagnosticDescriptor("OCT2008",
+                "Integration test container classes should forward the 'CancellationToken' to methods that take one",
+                "Cancellation Token is defined in IntegrationTest base class. Container classes should forward the 'CancellationToken' to methods that take one",
+                "Octopus.Testing",
+                DiagnosticSeverity.Info,
+                false, // Testing analysers are disabled by default, these will only be enabled for test projects
+                "Forward the CancellationToken property to compatible methods to ensure cancellation notifications get properly propagated,"
+                + "or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token.");
+        }
     }
 }
