@@ -9,7 +9,7 @@ namespace Tests.Testing.Integration
     public class IntegrationTestForwardCancellationTokenToInvocationsAnalyzerFixture
     {
         [TestCase]
-        public async Task No_Diagnostic_ClassesThatHaveNothingToDoWithThisAnalyser()
+        public async Task No_Diagnostic_ClassesThatHaveNothingToDoWithThisAnalyzer()
         {
             const string container = @"
 public class JustAClassSittingAroundDoingItsThing
@@ -21,7 +21,6 @@ public class JustAClassSittingAroundDoingItsThing
 
     Task MethodAsync() => Task.CompletedTask;
     Task MethodAsync(CancellationToken c) => Task.CompletedTask;
-
 }
 ";
             await Verify.VerifyAnalyzerAsync(container.WithTestingTypes());
@@ -246,7 +245,7 @@ public class TestClass : IntegrationTest
         [TestCase]
         public async Task Diagnostic_MethodWithCancellationTokenOverload()
         {
-            var container = @"
+            const string container = @"
 public class TestClass : IntegrationTest
 {
     async Task M()
@@ -266,7 +265,7 @@ public class TestClass : IntegrationTest
         [TestCase]
         public async Task Diagnostic_TaskStoredAsVariable()
         {
-            var container = @"
+            const string container = @"
 public class TestClass : IntegrationTest
 {
     async Task M()
@@ -287,7 +286,7 @@ public class TestClass : IntegrationTest
         [TestCase]
         public async Task Diagnostic_ExternalMethodWithCancellationTokenOverload()
         {
-            var container = @"
+            const string container = @"
 public class ExternalReference
 {
     public Task MethodAsync() => Task.CompletedTask;
@@ -333,7 +332,7 @@ public class TestClass : IntegrationTest
         [TestCase]
         public async Task Diagnostic_UnorderedNamedParameters()
         {
-            var container = @"
+            const string container = @"
 public class TestClass : IntegrationTest
 {
     async Task M()
@@ -354,7 +353,7 @@ public class TestClass : IntegrationTest
         {
             // This will be a surprise, as directly passing CancellationToken (from IntegrationTest) is not a valid code (static context).
             // The intention is to notify user and user should fix by adding CancellationToken parameter on the static method. 
-            var container = @"
+            const string container = @"
 public class TestClass : IntegrationTest
 {
     public static Task MethodAsync(int i, CancellationToken c = default) => Task.CompletedTask;
@@ -377,7 +376,7 @@ public class TestClass : IntegrationTest
         {
             // This will be a surprise, as directly passing CancellationToken (from IntegrationTest) is not a valid code (static context).
             // The intention is to notify user and user should fix by adding CancellationToken parameter on the static method. 
-            var container = @"
+            const string container = @"
 
 public class AccountResource {}
 public class BasicRepository<TResource> where TResource : class
@@ -403,7 +402,7 @@ public class TestClass : IntegrationTest
         {
             // This will be a surprise, as directly passing CancellationToken (from IntegrationTest) is not a valid code (static context).
             // The intention is to notify user and user should fix by adding CancellationToken parameter on the static method. 
-            var container = @"
+            const string container = @"
 
 public class Reader
 {
