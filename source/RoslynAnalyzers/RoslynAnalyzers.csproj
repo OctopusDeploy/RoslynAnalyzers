@@ -27,12 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!--
-    Using this version is intentional!
-    The newer 4.3.0 version break under the 'dotnet build' chain when this is added as a nuget package to another project. (Tested under .NET 6.0.301/401)              
-    -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.2.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.2.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0" />
   </ItemGroup>
 
 </Project>
