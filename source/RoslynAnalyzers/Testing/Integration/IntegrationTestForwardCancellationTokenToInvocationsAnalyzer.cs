@@ -20,6 +20,9 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class IntegrationTestForwardCancellationTokenToInvocationsAnalyzer : DiagnosticAnalyzer
     {
+        // True / false, indicating whether a fix is suggested for the diagnostic.
+        internal const string OfferDiagnosticFix = "OfferDiagnosticFix";
+
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
             Descriptors.Oct2008IntegrationTestForwardCancellationTokenToInvocations()
         );
@@ -59,12 +62,19 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
 
                     // Verify method has optional ct, warn user to be explicit rather than relying on default.
                     if (InvocationMethodTakesAToken(method, invocation.Arguments, cancellationTokenType) ||
-
-                        // Verify method has ct overload as last parameter.
                         InvocationMethodHasCancellationTokenOverload(method, cancellationTokenType, genericTaskType, genericValueTaskType))
                     {
-                        SyntaxNode? nodeToDiagnose = GetInvocationMethodNameNode(context.Operation.Syntax) ?? context.Operation.Syntax;
-                        context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2008IntegrationTestForwardCancellationTokenToInvocations(), nodeToDiagnose?.GetLocation()));
+                        var diagnosticProperties = ImmutableDictionary.CreateBuilder<string, string?>(StringComparer.Ordinal);
+                        diagnosticProperties.Add(OfferDiagnosticFix, OfferDiagnosticFixPropValue(context, invocation));
+
+                        var nodeToDiagnose = GetInvocationMethodNameNode(context.Operation.Syntax) ?? context.Operation.Syntax;
+                        context.ReportDiagnostic(
+                            Diagnostic.Create(
+                                Descriptors.Oct2008IntegrationTestForwardCancellationTokenToInvocations(),
+                                nodeToDiagnose.GetLocation(),
+                                diagnosticProperties.ToImmutable()
+                            )
+                        );
                     }
                 },
                 OperationKind.Invocation
@@ -76,10 +86,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
             return context.ContainingSymbol is IMethodSymbol containingMethod &&
 
                 // Only interested in IntegrationTestType classes.
-                containingMethod.ContainingType.IsAssignableTo(new OctopusTestingContext(context.Compilation).IntegrationTestType) &&
-
-                // No diagnostic on static method, this is handled by CA2016 and Octopus async-cancellation-token convention.
-                !containingMethod.IsStatic;
+                containingMethod.ContainingType.IsAssignableTo(new OctopusTestingContext(context.Compilation).IntegrationTestType);
         }
 
         static (INamedTypeSymbol? cancellationTokenType, INamedTypeSymbol? genericTaskType, INamedTypeSymbol? genericValueTaskType) GetWellKnownTypes(OperationAnalysisContext context)
@@ -93,7 +100,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
 
         static bool AnyArgument(ImmutableArray<IArgumentOperation> arguments, Func<IArgumentOperation, bool> predicate)
         {
-            for (int i = arguments.Length - 1; i >= 0; i--)
+            for (var i = arguments.Length - 1; i >= 0; i--)
             {
                 if (predicate(arguments[i]))
                 {
@@ -178,8 +185,8 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                     return false;
                 }
 
-                IMethodSymbol originalMethodWithAllParameters = (originalMethod.ReducedFrom ?? originalMethod).OriginalDefinition;
-                IMethodSymbol methodToCompareWithAllParameters = (methodToCompare.ReducedFrom ?? methodToCompare).OriginalDefinition;
+                var originalMethodWithAllParameters = (originalMethod.ReducedFrom ?? originalMethod).OriginalDefinition;
+                var methodToCompareWithAllParameters = (methodToCompare.ReducedFrom ?? methodToCompare).OriginalDefinition;
 
                 // Ensure parameters only differ by one - the ct
                 if (originalMethodWithAllParameters.Parameters.Length != methodToCompareWithAllParameters.Parameters.Length - 1)
@@ -189,10 +196,10 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
 
                 // Now compare the types of all parameters before the ct
                 // The largest i is the number of parameters in the method that has fewer parameters
-                for (int i = 0; i < originalMethodWithAllParameters.Parameters.Length; i++)
+                for (var i = 0; i < originalMethodWithAllParameters.Parameters.Length; i++)
                 {
-                    IParameterSymbol originalParameter = originalMethodWithAllParameters.Parameters[i];
-                    IParameterSymbol comparedParameter = methodToCompareWithAllParameters.Parameters[i];
+                    var originalParameter = originalMethodWithAllParameters.Parameters[i];
+                    var comparedParameter = methodToCompareWithAllParameters.Parameters[i];
                     if (!SymbolEqualityComparer.Default.Equals(originalParameter.Type, comparedParameter.Type))
                     {
                         return false;
@@ -247,7 +254,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
 
         static SyntaxNode? GetInvocationMethodNameNode(SyntaxNode invocationNode)
         {
-            if (!(invocationNode is InvocationExpressionSyntax invocationExpression))
+            if (invocationNode is not InvocationExpressionSyntax invocationExpression)
                 return null;
 
             if (invocationExpression.Expression is MemberBindingExpressionSyntax memberBindingExpression)
@@ -259,6 +266,33 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
             }
 
             return invocationExpression.Expression;
+        }
+
+        static string OfferDiagnosticFixPropValue(OperationAnalysisContext context, IOperation invocation)
+        {
+            var isStaticMethodContext = context.ContainingSymbol.IsStatic || IsLocalStaticOrAnonymousStaticMethod(invocation);
+
+            // Not offering fix for static method context.
+            return (!isStaticMethodContext).ToString();
+        }
+
+        static bool IsLocalStaticOrAnonymousStaticMethod(IOperation invocation)
+        {
+            var currentOperation = invocation.Parent;
+            while (currentOperation != null)
+            {
+                switch (currentOperation.Kind)
+                {
+                    case OperationKind.AnonymousFunction:
+                        return ((IAnonymousFunctionOperation)currentOperation).Symbol.IsStatic;
+                    case OperationKind.LocalFunction:
+                        return ((ILocalFunctionOperation)currentOperation).Symbol.IsStatic;
+                }
+
+                currentOperation = currentOperation.Parent;
+            }
+
+            return false;
         }
     }
 }
