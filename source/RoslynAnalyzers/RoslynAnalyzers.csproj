@@ -10,7 +10,7 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <NoWarn>RS2008</NoWarn>
-    <LangVersion>8</LangVersion>
+    <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- At the time of writing anything later than netstandard 2.0 doesn't work in Visual Studio -->
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -22,20 +22,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2" />
-    <!--
-    Using this version is intentional!
-    The newer version(s) break under the 'dotnet build' chain when this is added as a nuget package to another project. (Tested under .NET 5.0.101)
-    Fails with versions:
-      Microsoft.CodeAnalysis.CSharp 3.8.0
-      Microsoft.CodeAnalysis.CSharp 3.3.9.0-4.21056.26
-    -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.7.0" />
+    <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
+    <None Visible="false" Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="" />
-    <None Visible="false" Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.3.0" />
   </ItemGroup>
 
 </Project>
