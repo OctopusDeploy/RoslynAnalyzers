@@ -67,14 +67,14 @@ namespace Octopus.RoslynAnalyzers
             "Integration test container classes should only contain integration test classes and methods, any other complex logic or state " +
             "should be in builders, class/assembly fixtures, or some other generic helper."
         );
-        
+
         public static DiagnosticDescriptor Oct2007IntegrationTestContainersMethodsMustBePrivate => GetTestAnalyzerDescriptor(
             "OCT2007",
             "Methods in integration test container classes should be private",
             "Integration test container classes should only be used to organise tests (because we must have 1 test per class for maximum parallel goodness,"
             + " any logic that you want to share across multiple tests should be in builders, class/assembly fixtures, or some other generic helper."
         );
-        
+
         public static DiagnosticDescriptor Oct2008IntegrationTestForwardCancellationTokenToInvocations()
         {
             return new DiagnosticDescriptor("OCT2008",
