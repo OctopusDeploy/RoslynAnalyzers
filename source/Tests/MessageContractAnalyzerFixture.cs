@@ -7,28 +7,29 @@ using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octo
 
 namespace Tests
 {
-    static class Common
-    {
-        // Declarations copied verbatim from MessageContracts
-        public static readonly string MessageTypeDeclarations = @"
-namespace Octopus.Server.MessageContracts.Base
-{
-  public interface IRequest<TRequest, TResponse> where TRequest : IRequest<TRequest, TResponse> where TResponse : IResponse { }
-  public interface ICommand<TCommand, TResponse> where TCommand : ICommand<TCommand, TResponse> where TResponse : IResponse { }
-  public interface IResponse { }
-}";
-    }
-
     public class MessageContractAnalyzerFixture
     {
         [Test]
-        public async Task NoDiagnosticsOnCorrectlyNamedRequest()
+        public async Task NoDiagnosticsOnWellFormedRequest()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
-    public class SimpleRequest : IRequest<SimpleRequest, SimpleResponse> { }
+    public class SimpleRequest : IRequest<SimpleRequest, SimpleResponse>
+    {
+        protected SimpleRequest() { }
+        public SimpleRequest(string requiredString) 
+        {
+            RequiredString = requiredString; 
+        }
+
+        [Required]
+        public string RequiredString { get; set; }
+
+        [Optional]
+        public string? OptionalString { get; set; }
+    }
+
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
@@ -37,14 +38,53 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Test]
-        public async Task NoDiagnosticsOnCorrectlyNamedCommand()
+        public async Task NoDiagnosticsOnWellFormedCommand()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
-    public class SimpleCommand: ICommand<SimpleCommand, SimpleResponse> { }
+    public class SimpleCommand : ICommand<SimpleCommand, SimpleResponse>
+    {
+        protected SimpleCommand() { }
+        public SimpleCommand(string requiredString) 
+        {
+            RequiredString = requiredString; 
+        }
+
+        [Required]
+        public string RequiredString { get; set; }
+
+        [Optional]
+        public string? OptionalString { get; set; }
+    }
+
     public class SimpleResponse : IResponse { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source);
+        }
+        
+        [Test]
+        public async Task NoDiagnosticsOnWellFormedResponse()
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleResponse : IResponse 
+    {
+        protected SimpleResponse() { }
+        public SimpleResponse(string requiredString) 
+        {
+            RequiredString = requiredString; 
+        }
+
+        [Required]
+        public string RequiredString { get; set; }
+
+        [Optional]
+        public string? OptionalString { get; set; }
+    }
 }
 " + Common.MessageTypeDeclarations;
 
@@ -52,10 +92,9 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Test]
-        public async Task DiagnosticOnBadlyNamedRequest()
+        public async Task BadlyNamedRequest()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
     public class SimpleCommand: IRequest<SimpleCommand, SimpleResponse> { }
@@ -63,16 +102,15 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(5, 18, 5, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
 
         [Test]
-        public async Task DiagnosticOnBadlyNamedRequest_MultipleInterfaces()
+        public async Task BadlyNamedRequest_MultipleInterfaces()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
     public class RequestSimple: ExtraneousBaseClass, ISomethingElse, IRequest<RequestSimple, SimpleResponse> { }
@@ -83,16 +121,15 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(5, 18, 5, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
 
         [Test]
-        public async Task DiagnosticOnBadlyNamedCommand()
+        public async Task BadlyNamedCommand()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
     public class SimpleRequest : ICommand<SimpleRequest, SimpleResponse> { }
@@ -100,16 +137,15 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var result = new DiagnosticResult(MessageContractAnalyzers.CommandNameRule).WithSpan(5, 18, 5, 31);
+            var result = new DiagnosticResult(MessageContractAnalyzers.CommandNameRule).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, result);
         }
 
         [Test]
-        public async Task DiagnosticOnBadlyNamedRequestResponse()
+        public async Task BadlyNamedRequestResponse()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResult> { }
@@ -117,16 +153,15 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestResponseNameRule).WithSpan(5, 18, 5, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestResponseNameRule).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
 
         [Test]
-        public async Task DiagnosticOnBadlyNamedCommandResponse()
+        public async Task NamedCommandResponse()
         {
-            var source = @"
-using Octopus.Server.MessageContracts.Base;
+            var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
     public class SimpleCommand: ICommand<SimpleCommand, SimpleResult>
@@ -135,9 +170,48 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.CommandResponseNameRule).WithSpan(5, 18, 5, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.CommandResponseNameRule).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
+
+        [Test]
+        public async Task RequestWithImmutableProperty()
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
+    {
+        public string GetOnlyProp { get; }
     }
+    public class SimpleResponse : IResponse { }
+}
+" + Common.MessageTypeDeclarations;
+
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(4, 18, 4, 31);
+
+            await Verify.VerifyAnalyzerAsync(source); // TODO
+        }
+    }
+    
+    static class Common
+    {
+        // Declarations copied verbatim from MessageContracts
+        public static readonly string MessageTypeDeclarations = @"
+namespace Octopus.Server.MessageContracts.Base
+{
+  public interface IRequest<TRequest, TResponse> where TRequest : IRequest<TRequest, TResponse> where TResponse : IResponse { }
+  public interface ICommand<TCommand, TResponse> where TCommand : ICommand<TCommand, TResponse> where TResponse : IResponse { }
+  public interface IResponse { }
+
+  namespace Attributes
+  {
+    public sealed class OptionalAttribute : ValidationAttribute { } // not quite verbatim for this but it doesn't matter
+  }
+}";
+        // stick these all on a single line to not interfere with diagnostic line location
+        public static readonly string Usings = @"using Octopus.Server.MessageContracts.Base;using Octopus.Server.MessageContracts.Base.Attributes;using System.ComponentModel.DataAnnotations;";
+    }
+
 }
