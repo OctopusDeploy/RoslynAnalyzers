@@ -102,7 +102,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.Octopus_RequestTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -121,7 +121,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.Octopus_RequestTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -137,7 +137,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var result = new DiagnosticResult(MessageContractAnalyzers.CommandNameRule).WithSpan(4, 18, 4, 31);
+            var result = new DiagnosticResult(MessageContractAnalyzers.Octopus_CommandTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, result);
         }
@@ -153,7 +153,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestResponseNameRule).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -170,7 +170,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.CommandResponseNameRule).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -189,7 +189,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestNameRule).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.Octopus_RequestTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
 
             await Verify.VerifyAnalyzerAsync(source); // TODO
         }

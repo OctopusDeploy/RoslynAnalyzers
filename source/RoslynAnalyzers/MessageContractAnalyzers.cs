@@ -18,59 +18,43 @@ namespace Octopus.RoslynAnalyzers
     {
         const string Category = "Octopus";
 
-        const string CommandNameDiagnosticId = "Octopus_CommandTypesMustBeNamedCorrectly";
-        const string CommandNameTitle = "Types that implement ICommand must be named correctly";
-        const string CommandNameMessageFormat = "Types that implement ICommand must be called <thing>Command";
-
-        const string RequestNameDiagnosticId = "Octopus_RequestTypesMustBeNamedCorrectly";
-        const string RequestNameTitle = "Types that implement IRequest must be named correctly";
-        const string RequestNameMessageFormat = "Types that implement IRequest must be called <thing>Request";
-
-        const string CommandResponseNameDiagnosticId = "Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes";
-        const string CommandResponseNameTitle = "Types that implement ICommand must have responses with matching names";
-        const string CommandResponseNameMessageFormat = "Types that implement ICommand have response types called <thing>Response";
-
-        const string RequestResponseNameDiagnosticId = "Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes";
-        const string RequestResponseNameTitle = "Types that implement IRequest must have responses with matching names";
-        const string RequestResponseNameMessageFormat = "Types that implement IRequest have response types called <thing>Response";
-
-        internal static readonly DiagnosticDescriptor CommandNameRule = new DiagnosticDescriptor(
-            CommandNameDiagnosticId,
-            CommandNameTitle,
-            CommandNameMessageFormat,
+        internal static readonly DiagnosticDescriptor Octopus_CommandTypesMustBeNamedCorrectly = new(
+            "Octopus_CommandTypesMustBeNamedCorrectly",
+            "Types that implement ICommand must be named correctly",
+            "Types that implement ICommand must be called <thing>Command",
             Category,
             DiagnosticSeverity.Error,
             true);
 
-        internal static readonly DiagnosticDescriptor RequestNameRule = new DiagnosticDescriptor(
-            RequestNameDiagnosticId,
-            RequestNameTitle,
-            RequestNameMessageFormat,
+        internal static readonly DiagnosticDescriptor Octopus_RequestTypesMustBeNamedCorrectly = new(
+            "Octopus_RequestTypesMustBeNamedCorrectly",
+            "Types that implement IRequest must be named correctly",
+            "Types that implement IRequest must be called <thing>Request",
             Category,
             DiagnosticSeverity.Error,
             true);
 
-        internal static readonly DiagnosticDescriptor CommandResponseNameRule = new DiagnosticDescriptor(
-            CommandResponseNameDiagnosticId,
-            CommandResponseNameTitle,
-            CommandResponseNameMessageFormat,
+        internal static readonly DiagnosticDescriptor Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes = new(
+            "Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes",
+            "Types that implement ICommand must have responses with matching names",
+            "Types that implement ICommand have response types called <thing>Response",
             Category,
             DiagnosticSeverity.Error,
             true);
 
-        internal static readonly DiagnosticDescriptor RequestResponseNameRule = new DiagnosticDescriptor(
-            RequestResponseNameDiagnosticId,
-            RequestResponseNameTitle,
-            RequestResponseNameMessageFormat,
+        internal static readonly DiagnosticDescriptor Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes = new(
+            "Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes",
+            "Types that implement IRequest must have responses with matching names",
+            "Types that implement IRequest have response types called <thing>Response",
             Category,
             DiagnosticSeverity.Error,
             true);
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
-            CommandNameRule,
-            RequestNameRule,
-            CommandResponseNameRule,
-            RequestResponseNameRule);
+            Octopus_CommandTypesMustBeNamedCorrectly,
+            Octopus_RequestTypesMustBeNamedCorrectly,
+            Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes,
+            Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -145,7 +129,7 @@ namespace Octopus.RoslynAnalyzers
             if (CommandNameRegex.IsMatch(typeDec.Identifier.Text))
                 return true;
 
-            var diagnostic = Diagnostic.Create(CommandNameRule, typeDec.Identifier.GetLocation());
+            var diagnostic = Diagnostic.Create(Octopus_CommandTypesMustBeNamedCorrectly, typeDec.Identifier.GetLocation());
             context.ReportDiagnostic(diagnostic);
             return false;
         }
@@ -155,14 +139,14 @@ namespace Octopus.RoslynAnalyzers
                 typeDec,
                 requestOrCommandDec,
                 "Command",
-                CommandResponseNameRule);
+                Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes);
 
         static bool RequestTypes_MustBeNamedCorrectly(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             if (RequestNameRegex.IsMatch(typeDec.Identifier.Text))
                 return true;
 
-            var diagnostic = Diagnostic.Create(RequestNameRule, typeDec.Identifier.GetLocation());
+            var diagnostic = Diagnostic.Create(Octopus_RequestTypesMustBeNamedCorrectly, typeDec.Identifier.GetLocation());
             context.ReportDiagnostic(diagnostic);
             return false;
         }
@@ -172,7 +156,7 @@ namespace Octopus.RoslynAnalyzers
                 typeDec,
                 requestOrCommandDec,
                 "Request",
-                RequestResponseNameRule);
+                Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes);
 
         // ----- helpers --------------- 
 
