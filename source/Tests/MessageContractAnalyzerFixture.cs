@@ -184,64 +184,28 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
-
+        
         [Test]
-        public async Task PropertiesOnMessageTypesMustBeMutable_ForRequest()
-        {
-            var source = Common.Usings + @"
-namespace Octopus.Core.Features.ServerTasks.MessageContracts
-{
-    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
-    {
-        public string GetOnlyProp { get; }
-        public string ComputedProp => GetOnlyProp.ToUpperInvariant();
-    }
-    public class SimpleResponse : IResponse { }
-}
-" + Common.MessageTypeDeclarations;
-
-            await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(6, 23, 6, 34),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 23, 7, 35));
-        }
-
-        [Test]
-        public async Task PropertiesOnMessageTypesMustBeMutable_ForCommand()
+        public async Task PropertiesOnMessageTypesMustBeMutable()
         {
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
     public class SimpleCommand: ICommand<SimpleCommand, SimpleResponse> 
     {
-        public string GetOnlyProp { get; }
-        public string ComputedProp => GetOnlyProp.ToUpperInvariant();
+        [Optional]
+        public string? GetOnlyProp { get; }
+        
+        [Optional]
+        public string? ComputedProp => GetOnlyProp?.ToUpperInvariant();
     }
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(6, 23, 6, 34),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 23, 7, 35));
-        }
-
-        [Test]
-        public async Task PropertiesOnMessageTypesMustBeMutable_ForResponse()
-        {
-            var source = Common.Usings + @"
-namespace Octopus.Core.Features.ServerTasks.MessageContracts
-{
-    public class SimpleResponse : IResponse
-    {
-        public string GetOnlyProp { get; }
-        public string ComputedProp => GetOnlyProp.ToUpperInvariant();
-    }
-}
-" + Common.MessageTypeDeclarations;
-
-            await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(6, 23, 6, 34),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 23, 7, 35));
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(10, 24, 10, 36),
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 24, 7, 35));
         }
 
         [Test]
@@ -338,6 +302,30 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(16, 29, 16, 47),
                 new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(19, 25, 19, 44));
+        }
+
+        [Test]
+        public async Task PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute() // except collection types
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
+    {
+        public string? StringProperty { get; set; }
+
+        public int? IntProperty { get; set; }
+
+        [Optional]
+        public int? OptionalIntProperty { get; set; } // should not fire on this
+    }
+    public class SimpleResponse : IResponse { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(6, 24, 6, 38),
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(8, 21, 8, 32));
         }
     }
 

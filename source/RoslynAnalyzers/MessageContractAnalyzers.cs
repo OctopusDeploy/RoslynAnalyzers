@@ -98,6 +98,17 @@ This convention enforces that all optional properties must be nullable, so that 
 so that they are safe to consume as soon as contracts come off the wire. This protects us when an [Optional] property is a collection type and is not
 initialized by the constructor.");
         
+        internal static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
+            "Octopus_PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute",
+            "Properties on Message Types must be either [Optional] or [Required]",
+            "Properties on Message Types must be either [Optional] or [Required]",
+            Category,
+            DiagnosticSeverity.Error,
+            true,
+            @"Principle: if you give me a thing, that thing is valid.
+By requiring validation attributes on all of our message contracts, we can be confident that we haven't forgotten to validate something.
+If a parameter is genuinely optional, use the [Optional] attribute.");
+        
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
             CommandTypesMustBeNamedCorrectly,
             RequestTypesMustBeNamedCorrectly,
@@ -106,7 +117,8 @@ initialized by the constructor.");
             PropertiesOnMessageTypesMustBeMutable,
             RequiredPropertiesOnMessageTypesMustNotBeNullable,
             OptionalPropertiesOnMessageTypesMustBeNullable,
-            MessageTypesMustInstantiateCollections);
+            MessageTypesMustInstantiateCollections,
+            PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -202,6 +214,7 @@ initialized by the constructor.");
                 result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec, required);
                 result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context, propDec, required, isCollectionType);
                 result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
+                result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
             }
 
             return result;
@@ -289,6 +302,17 @@ initialized by the constructor.");
                 return false;
             }
             
+            return true;
+        }
+
+        static bool PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required)
+        {
+            if (required == RequiredState.Unspecified)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute, propDec.Identifier.GetLocation()));
+                return false;
+            }
+
             return true;
         }
 
