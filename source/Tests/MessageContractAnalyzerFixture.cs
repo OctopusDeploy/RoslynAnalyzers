@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.MessageContractAnalyzers>;
 
@@ -327,6 +328,29 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(6, 24, 6, 38),
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(8, 21, 8, 32));
         }
+        
+        [Test]
+        public async Task SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId() // except collection types
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
+    {
+        [Optional]
+        public SpaceId? SpaceId { get; set; } // should not fire on this
+    }
+    public class SimpleResponse : IResponse 
+    {
+        [Optional]
+        public string? SpaceId { get; set; } // fire!, don't use strings for spaceId
+    }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(MessageContractAnalyzers.SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId).WithSpan(12, 24, 12, 31));
+        }
     }
 
     static class Common
@@ -343,9 +367,22 @@ namespace Octopus.Server.MessageContracts.Base
   {
     public sealed class OptionalAttribute : ValidationAttribute { } // not quite verbatim for this but it doesn't matter
   }
-}";
-
+}
+namespace Octopus.Server.MessageContracts.Features.Spaces
+{
+    public class SpaceId {} // doesn't need any actual behaviour for the analyzer to pass.
+}
+";
         // stick these all on a single line to not interfere with diagnostic line location
-        public static readonly string Usings = @"using System;using System.Collections.Generic;using Octopus.Server.MessageContracts.Base;using Octopus.Server.MessageContracts.Base.Attributes;using System.ComponentModel.DataAnnotations;";
+        public static readonly string Usings = string.Join("",
+            new[]
+            {
+                "System",
+                "System.Collections.Generic",
+                "System.ComponentModel.DataAnnotations",
+                "Octopus.Server.MessageContracts.Base",
+                "Octopus.Server.MessageContracts.Base.Attributes",
+                "Octopus.Server.MessageContracts.Features.Spaces"
+            }.Select(s => $"using {s};"));
     }
 }

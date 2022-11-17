@@ -109,6 +109,15 @@ initialized by the constructor.");
 By requiring validation attributes on all of our message contracts, we can be confident that we haven't forgotten to validate something.
 If a parameter is genuinely optional, use the [Optional] attribute.");
         
+        internal static readonly DiagnosticDescriptor SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId = new(
+            "Octopus_SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId",
+            "Properties on Message Types named SpaceId must be of type SpaceId",
+            "Properties on Message Types named SpaceId must be of type SpaceId",
+            Category,
+            DiagnosticSeverity.Error,
+            true,
+            @"All properties named SpaceId must be of type SpaceId so that the model binder can set them");
+        
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
             CommandTypesMustBeNamedCorrectly,
             RequestTypesMustBeNamedCorrectly,
@@ -118,7 +127,8 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             RequiredPropertiesOnMessageTypesMustNotBeNullable,
             OptionalPropertiesOnMessageTypesMustBeNullable,
             MessageTypesMustInstantiateCollections,
-            PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute);
+            PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
+            SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -128,15 +138,19 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
         }
 
         // ReSharper disable once InconsistentNaming
-        record struct SpecialTypeDeclarations(INamedTypeSymbol String, INamedTypeSymbol IEnumerable);
+        record struct SpecialTypeDeclarations(
+            INamedTypeSymbol String, 
+            INamedTypeSymbol IEnumerable, 
+            INamedTypeSymbol? SpaceId);
 
-        static SpecialTypeDeclarations specialTypes; // if you happened to use this before CacheCommonTypes it will blow up; beware
+        static SpecialTypeDeclarations cachedTypes; // if you happened to use this before CacheCommonTypes it will blow up; beware
 
         void CacheCommonTypes(CompilationStartAnalysisContext context)
         {
-            var stringTypeInfo = context.Compilation.GetSpecialType(SpecialType.System_String);
-            var enumerableTypeInfo = context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
-            specialTypes = new SpecialTypeDeclarations(stringTypeInfo, enumerableTypeInfo);
+            var str = context.Compilation.GetSpecialType(SpecialType.System_String);
+            var enumerable = context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
+            var spaceId = context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId");
+            cachedTypes = new SpecialTypeDeclarations(str, enumerable, spaceId);
 
             context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
@@ -215,6 +229,7 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
                 result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context, propDec, required, isCollectionType);
                 result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
                 result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
+                result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
             }
 
             return result;
@@ -244,17 +259,12 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
 
         static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
-            var propType = propDec.Type;
-            if (propType is NullableTypeSyntax n)
-            {
-                propType = n.ElementType;
-            }
+            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
             var typeInfo = context.SemanticModel.GetTypeInfo(propType);
-            if (typeInfo.Type is not { } t)
-                return false;
+            if (typeInfo.Type == null) return false;
 
-            return t.IsAssignableTo(specialTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(t, specialTypes.String);
+            return typeInfo.Type.IsAssignableTo(cachedTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.String);
         }
 
         static bool PropertiesOnMessageTypes_MustBeMutable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
@@ -310,6 +320,25 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             if (required == RequiredState.Unspecified)
             {
                 context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute, propDec.Identifier.GetLocation()));
+                return false;
+            }
+
+            return true;
+        }
+        
+        static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        {
+            // only applies to properties literally called SpaceId; also bail if we can't find the declaration of the SpaceId type
+            if (propDec.Identifier.Text != "SpaceId" || cachedTypes.SpaceId == null) return true;
+            
+            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
+            
+            var typeInfo = context.SemanticModel.GetTypeInfo(propType);
+            if (typeInfo.Type == null) return false;
+            
+            if (!SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.SpaceId))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId, propDec.Identifier.GetLocation()));
                 return false;
             }
 
