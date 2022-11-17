@@ -37,7 +37,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         public int? OptionalInt { get; set; }
 
         [Optional]
-        public System.Collections.Generic.List<string> OptionalStringList { get; set; } = new(); 
+        public List<string> OptionalStringList { get; set; } = new(); 
     }
 
     public class SimpleResponse : IResponse { }
@@ -74,7 +74,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 
             await Verify.VerifyAnalyzerAsync(source);
         }
-        
+
         [Test]
         public async Task NoDiagnosticsOnWellFormedResponse()
         {
@@ -199,12 +199,12 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
-            
-            await Verify.VerifyAnalyzerAsync(source, 
+
+            await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(6, 23, 6, 34),
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 23, 7, 35));
         }
-        
+
         [Test]
         public async Task PropertiesOnMessageTypesMustBeMutable_ForCommand()
         {
@@ -219,12 +219,12 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
-            
-            await Verify.VerifyAnalyzerAsync(source, 
+
+            await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(6, 23, 6, 34),
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 23, 7, 35));
         }
-        
+
         [Test]
         public async Task PropertiesOnMessageTypesMustBeMutable_ForResponse()
         {
@@ -238,12 +238,12 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     }
 }
 " + Common.MessageTypeDeclarations;
-            
-            await Verify.VerifyAnalyzerAsync(source, 
+
+            await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(6, 23, 6, 34),
                 new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 23, 7, 35));
         }
-        
+
         [Test]
         public async Task RequiredPropertiesOnMessageTypesMustNotBeNullable()
         {
@@ -269,7 +269,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
                 new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithSpan(10, 24, 10, 38),
                 new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithSpan(13, 21, 13, 32));
         }
-        
+
         [Test]
         public async Task OptionalPropertiesOnMessageTypesMustBeNullable() // except collection types
         {
@@ -285,7 +285,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         public int IntProperty { get; set; }
 
         [Optional]
-        public string[] StringListProperty { get; set; } = null; // should NOT fire on this
+        public string[] StringListProperty { get; set; } = null; // should NOT fire on this because optional nonnull collections are allowed
     }
     public class SimpleResponse : IResponse { }
 }
@@ -295,8 +295,52 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
                 new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithSpan(7, 23, 7, 37),
                 new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithSpan(10, 20, 10, 31));
         }
+
+        [Test]
+        public async Task MessageTypesMustInstantiateCollections()
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
+    {
+        protected SimpleRequest() { }
+        public SimpleRequest(List<string> requiredStringList)
+        {
+            RequiredStringListProperty = requiredStringList;
+        }
+
+        [Required]
+        public List<string> RequiredStringListProperty { get; set; } // should fire on this; collection required so another check will ensure it's assigned in the constructor
+
+        [Optional]
+        public List<string> StringListProperty { get; set; } // should fire on this; collection is nonnullable
+
+        [Optional]
+        public string[] StringArrayProperty { get; set; } // should fire on this; collection is nonnullable
+
+        [Optional]
+        public List<string>? NullableStringListProperty { get; set; } // should not fire on this; collection is nullable
+
+        [Optional]
+        public string[]? NullableStringArrayProperty { get; set; } // should not fire on this; collection is nullable
+
+        [Optional]
+        public List<string> StringListPropertyInstantiated { get; set; } = new(); // should not fire on this; collection is instantiated
+
+        [Optional]
+        public string[] StringArrayPropertyInstantiated { get; set; } = Array.Empty<string>(); // should not fire on this; collection is instantiated
     }
-    
+    public class SimpleResponse : IResponse { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(16, 29, 16, 47),
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(19, 25, 19, 44));
+        }
+    }
+
     static class Common
     {
         // Declarations copied verbatim from MessageContracts
@@ -312,8 +356,8 @@ namespace Octopus.Server.MessageContracts.Base
     public sealed class OptionalAttribute : ValidationAttribute { } // not quite verbatim for this but it doesn't matter
   }
 }";
-        // stick these all on a single line to not interfere with diagnostic line location
-        public static readonly string Usings = @"using Octopus.Server.MessageContracts.Base;using Octopus.Server.MessageContracts.Base.Attributes;using System.ComponentModel.DataAnnotations;";
-    }
 
+        // stick these all on a single line to not interfere with diagnostic line location
+        public static readonly string Usings = @"using System;using System.Collections.Generic;using Octopus.Server.MessageContracts.Base;using Octopus.Server.MessageContracts.Base.Attributes;using System.ComponentModel.DataAnnotations;";
+    }
 }

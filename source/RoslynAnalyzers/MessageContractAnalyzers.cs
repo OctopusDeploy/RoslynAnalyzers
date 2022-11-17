@@ -16,7 +16,7 @@ namespace Octopus.RoslynAnalyzers
     public class MessageContractAnalyzers : DiagnosticAnalyzer
     {
         // ReSharper disable UnusedMethodReturnValue.Local
-        
+
         const string Category = "Octopus";
 
         internal static readonly DiagnosticDescriptor CommandTypesMustBeNamedCorrectly = new(
@@ -75,7 +75,7 @@ But what if someone messes with a payload after it comes off the wire? Please do
             true,
             @"Properties marked as [Required] are just that - they MUST be supplied in the on-the-wire payload.
 This convention enforces that all optional properties must be not-nullable, so that consumers of the type know they can safely dereference the information in these properties.");
-        
+
         internal static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeNullable = new(
             "Octopus_OptionalPropertiesOnMessageTypesMustBeNullable",
             "Optional Properties on MessageTypes must be nullable",
@@ -87,6 +87,17 @@ This convention enforces that all optional properties must be not-nullable, so t
 We would expect [Optional] properties to be null if they have not been provided in the payload.
 This convention enforces that all optional properties must be nullable, so that consumers of the type are aware that they need to handle it appropriately.");
         
+        internal static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
+            "Octopus_MessageTypesMustInstantiateCollections",
+            "MessageTypes must instantiate non-nullable collections",
+            "MessageTypes must instantiate non-nullable collections.",
+            Category,
+            DiagnosticSeverity.Error,
+            true,
+            @"With all [Required] properties set by the public parameterized constructor, we also want to make sure any collection types are initialized by default
+so that they are safe to consume as soon as contracts come off the wire. This protects us when an [Optional] property is a collection type and is not
+initialized by the constructor.");
+        
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
             CommandTypesMustBeNamedCorrectly,
             RequestTypesMustBeNamedCorrectly,
@@ -94,7 +105,8 @@ This convention enforces that all optional properties must be nullable, so that 
             RequestTypesMustHaveCorrectlyNamedResponseTypes,
             PropertiesOnMessageTypesMustBeMutable,
             RequiredPropertiesOnMessageTypesMustNotBeNullable,
-            OptionalPropertiesOnMessageTypesMustBeNullable);
+            OptionalPropertiesOnMessageTypesMustBeNullable,
+            MessageTypesMustInstantiateCollections);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -113,7 +125,7 @@ This convention enforces that all optional properties must be nullable, so that 
             var stringTypeInfo = context.Compilation.GetSpecialType(SpecialType.System_String);
             var enumerableTypeInfo = context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
             specialTypes = new SpecialTypeDeclarations(stringTypeInfo, enumerableTypeInfo);
-            
+
             context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
 
@@ -180,17 +192,41 @@ This convention enforces that all optional properties must be nullable, so that 
             {
                 // only validate public properties
                 if (!propDec.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword))) continue;
-                
+
                 // we have a number of places where we treat collection types differently; front-load that info
                 var isCollectionType = IsCollectionType(context, propDec);
+                var required = GetRequiredState(propDec);
 
                 // if anything returns false, propagate false outwards
                 result &= PropertiesOnMessageTypes_MustBeMutable(context, propDec);
-                result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec);
-                result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context, propDec, isCollectionType);
+                result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec, required);
+                result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context, propDec, required, isCollectionType);
+                result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
             }
 
             return result;
+        }
+
+        enum RequiredState
+        {
+            Unspecified,
+            Optional,
+            Required,
+        }
+
+        static RequiredState GetRequiredState(PropertyDeclarationSyntax propDec)
+        {
+            var attrNames = propDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
+
+            foreach (var attrName in attrNames)
+            {
+                // it has an attribute called Required. Not necessarily the one from System.ComponentModel.DataAnnotations but good enough.
+                if (attrName == "Required") return RequiredState.Required;
+                // it has an attribute called Optional. Not necessarily the one from Octopus.MessageContracts.Attribute but good enough.
+                if (attrName == "Optional") return RequiredState.Optional;
+            }
+
+            return RequiredState.Unspecified;
         }
 
         static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
@@ -200,17 +236,12 @@ This convention enforces that all optional properties must be nullable, so that 
             {
                 propType = n.ElementType;
             }
-            
+
             var typeInfo = context.SemanticModel.GetTypeInfo(propType);
             if (typeInfo.Type is not { } t)
                 return false;
-                
-            if (t.IsAssignableTo(specialTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(t, specialTypes.String))
-            {
-                return true;
-            }
 
-            return false;
+            return t.IsAssignableTo(specialTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(t, specialTypes.String);
         }
 
         static bool PropertiesOnMessageTypes_MustBeMutable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
@@ -225,11 +256,9 @@ This convention enforces that all optional properties must be nullable, so that 
             return true;
         }
 
-        static bool RequiredPropertiesOnMessageTypes_MustNotBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        static bool RequiredPropertiesOnMessageTypes_MustNotBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required)
         {
-            // it has an attribute called Required. Not necessarily the one from System.ComponentModel.DataAnnotations but good enough.
-            var isRequired = propDec.AttributeLists.Any(al => al.Attributes.Any(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text == "Required"));
-            if (isRequired && propDec.Type is NullableTypeSyntax) // it's nullable
+            if (required == RequiredState.Required && propDec.Type is NullableTypeSyntax)
             {
                 context.ReportDiagnostic(Diagnostic.Create(RequiredPropertiesOnMessageTypesMustNotBeNullable, propDec.Identifier.GetLocation()));
                 return false;
@@ -237,18 +266,30 @@ This convention enforces that all optional properties must be nullable, so that 
 
             return true;
         }
-        
-        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, bool isCollectionType)
-        {
-            // it has an attribute called Optional. Not necessarily the one from Octopus.MessageContracts.Attributes but good enough.
-            var isOptional = propDec.AttributeLists.Any(al => al.Attributes.Any(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text == "Optional"));
-            if (!isOptional || propDec.Type is NullableTypeSyntax || isCollectionType)
-                return true;
-            
-            // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
-            context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable, propDec.Identifier.GetLocation()));
-            return false;
 
+        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType)
+        {
+            if (required == RequiredState.Optional && !isCollectionType && propDec.Type is not NullableTypeSyntax)
+            {
+                // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
+                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable, propDec.Identifier.GetLocation()));
+                return false;
+            }
+
+            return true;
+        }
+
+        static bool MessageTypes_MustInstantiateCollections(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType)
+        {
+            if (!isCollectionType || required != RequiredState.Optional || propDec.Type is NullableTypeSyntax) return true; // only applies to nonnullable optional collections
+
+            if (propDec.Initializer == null)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustInstantiateCollections, propDec.Identifier.GetLocation()));
+                return false;
+            }
+            
+            return true;
         }
 
         static bool CommandTypes_MustBeNamedCorrectly(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
@@ -303,7 +344,7 @@ This convention enforces that all optional properties must be nullable, so that 
                 var expectedName = ReplaceLast(typeDec.Identifier.Text, requestOrCommand, "Response");
                 if (responseTypeStr != expectedName)
                 {
-                    // TODO we should be able to publish a fix-it given we know what the name is supposed to be
+                    // Future: we should be able to publish a fix-it given we know what the name is supposed to be.
                     var diagnostic = Diagnostic.Create(diagnosticToRaise, typeDec.Identifier.GetLocation());
                     context.ReportDiagnostic(diagnostic);
                     return false;
@@ -317,12 +358,7 @@ This convention enforces that all optional properties must be nullable, so that 
         static string ReplaceLast(string str, string oldValue, string newValue)
         {
             var pos = str.LastIndexOf(oldValue, StringComparison.Ordinal);
-            if (pos != -1)
-            {
-                return str.Remove(pos, oldValue.Length).Insert(pos, newValue);
-            }
-
-            return str;
+            return pos != -1 ? str.Remove(pos, oldValue.Length).Insert(pos, newValue) : str;
         }
     }
 }
