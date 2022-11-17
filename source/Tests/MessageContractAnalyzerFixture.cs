@@ -276,7 +276,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Required]
-        public List<string> RequiredStringListProperty { get; set; } // should fire on this; collection required so another check will ensure it's assigned in the constructor
+        public List<string> RequiredStringListProperty { get; set; } // should not fire on this; collection required so another check will ensure it's assigned in the constructor
 
         [Optional]
         public List<string> StringListProperty { get; set; } // should fire on this; collection is nonnullable
