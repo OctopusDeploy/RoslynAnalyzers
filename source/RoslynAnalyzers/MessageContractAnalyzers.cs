@@ -86,7 +86,7 @@ This convention enforces that all optional properties must be not-nullable, so t
             @"Properties marked as [Optional] are just that - they do not need to be supplied in the on-the-wire payload.
 We would expect [Optional] properties to be null if they have not been provided in the payload.
 This convention enforces that all optional properties must be nullable, so that consumers of the type are aware that they need to handle it appropriately.");
-        
+
         internal static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
             "Octopus_MessageTypesMustInstantiateCollections",
             "MessageTypes must instantiate non-nullable collections",
@@ -97,7 +97,7 @@ This convention enforces that all optional properties must be nullable, so that 
             @"With all [Required] properties set by the public parameterized constructor, we also want to make sure any collection types are initialized by default
 so that they are safe to consume as soon as contracts come off the wire. This protects us when an [Optional] property is a collection type and is not
 initialized by the constructor.");
-        
+
         internal static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
             "Octopus_PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute",
             "Properties on Message Types must be either [Optional] or [Required]",
@@ -108,7 +108,7 @@ initialized by the constructor.");
             @"Principle: if you give me a thing, that thing is valid.
 By requiring validation attributes on all of our message contracts, we can be confident that we haven't forgotten to validate something.
 If a parameter is genuinely optional, use the [Optional] attribute.");
-        
+
         internal static readonly DiagnosticDescriptor SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId = new(
             "Octopus_SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId",
             "Properties on Message Types named SpaceId must be of type SpaceId",
@@ -117,7 +117,18 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             DiagnosticSeverity.Error,
             true,
             @"All properties named SpaceId must be of type SpaceId so that the model binder can set them");
-        
+
+        internal static readonly DiagnosticDescriptor IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType = new(
+            "Octopus_IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            Category,
+            DiagnosticSeverity.Error,
+            true,
+            @"All Id properties on message contracts should be CaseInsensitiveStringTinyTypes.
+We want to avoid stringly typed Ids as they can be mixed up. This convention encourages their use.
+If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Area/Document/EntityName].MessageContracts");
+
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
             CommandTypesMustBeNamedCorrectly,
             RequestTypesMustBeNamedCorrectly,
@@ -128,7 +139,8 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             OptionalPropertiesOnMessageTypesMustBeNullable,
             MessageTypesMustInstantiateCollections,
             PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
-            SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId);
+            SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId,
+            IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -139,18 +151,20 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
 
         // ReSharper disable once InconsistentNaming
         record struct SpecialTypeDeclarations(
-            INamedTypeSymbol String, 
-            INamedTypeSymbol IEnumerable, 
-            INamedTypeSymbol? SpaceId);
+            INamedTypeSymbol String,
+            INamedTypeSymbol IEnumerable,
+            INamedTypeSymbol? SpaceId,
+            INamedTypeSymbol? CaseInsensitiveStringTinyType);
 
         static SpecialTypeDeclarations cachedTypes; // if you happened to use this before CacheCommonTypes it will blow up; beware
 
         void CacheCommonTypes(CompilationStartAnalysisContext context)
         {
-            var str = context.Compilation.GetSpecialType(SpecialType.System_String);
-            var enumerable = context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
-            var spaceId = context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId");
-            cachedTypes = new SpecialTypeDeclarations(str, enumerable, spaceId);
+            cachedTypes = new SpecialTypeDeclarations(
+                String: context.Compilation.GetSpecialType(SpecialType.System_String),
+                IEnumerable: context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable),
+                SpaceId: context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId"),
+                CaseInsensitiveStringTinyType: context.Compilation.GetTypeByMetadataName("Octopus.TinyTypes.CaseInsensitiveStringTinyType"));
 
             context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
@@ -230,6 +244,7 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
                 result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
                 result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
                 result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
+                result &= IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(context, propDec);
             }
 
             return result;
@@ -249,6 +264,7 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             foreach (var attrName in attrNames)
             {
                 // it has an attribute called Required. Not necessarily the one from System.ComponentModel.DataAnnotations but good enough.
+                // Note: we could resolve the full type which is more expensive, it's unclear as to whether that makes a difference or not
                 if (attrName == "Required") return RequiredState.Required;
                 // it has an attribute called Optional. Not necessarily the one from Octopus.MessageContracts.Attribute but good enough.
                 if (attrName == "Optional") return RequiredState.Optional;
@@ -311,7 +327,7 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
                 context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustInstantiateCollections, propDec.Identifier.GetLocation()));
                 return false;
             }
-            
+
             return true;
         }
 
@@ -325,17 +341,36 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
 
             return true;
         }
-        
+
+        static bool IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        {
+            // only applies to properties ending in Id, except SpaceId (handled below); also bail if we can't find the declaration of the CaseInsensitiveStringTinyType type
+            if (!propDec.Identifier.Text.EndsWith("Id") || propDec.Identifier.Text == "SpaceId" || cachedTypes.CaseInsensitiveStringTinyType == null) return true;
+
+            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
+
+            var typeInfo = context.SemanticModel.GetTypeInfo(propType);
+            if (typeInfo.Type == null) return false;
+
+            if (!typeInfo.Type.IsAssignableTo(cachedTypes.CaseInsensitiveStringTinyType))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType, propDec.Identifier.GetLocation()));
+                return false;
+            }
+
+            return true;
+        }
+
         static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
             // only applies to properties literally called SpaceId; also bail if we can't find the declaration of the SpaceId type
             if (propDec.Identifier.Text != "SpaceId" || cachedTypes.SpaceId == null) return true;
-            
+
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
-            
+
             var typeInfo = context.SemanticModel.GetTypeInfo(propType);
             if (typeInfo.Type == null) return false;
-            
+
             if (!SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.SpaceId))
             {
                 context.ReportDiagnostic(Diagnostic.Create(SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId, propDec.Identifier.GetLocation()));

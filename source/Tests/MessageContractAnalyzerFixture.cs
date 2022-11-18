@@ -351,6 +351,29 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(MessageContractAnalyzers.SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId).WithSpan(12, 24, 12, 31));
         }
+        
+        [Test]
+        public async Task IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType() // except collection types
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
+    {
+        [Optional]
+        public string? EnvironmentId { get; set; } // should fire on this
+
+        [Optional]
+        public ProjectId? ProjectId { get; set; } // should not fire on this
+    }
+    public class SimpleResponse : IResponse { }
+    public class ProjectId : CaseInsensitiveStringTinyType { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(MessageContractAnalyzers.IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType).WithSpan(7, 24, 7, 37));
+        }
     }
 
     static class Common
@@ -372,6 +395,10 @@ namespace Octopus.Server.MessageContracts.Features.Spaces
 {
     public class SpaceId {} // doesn't need any actual behaviour for the analyzer to pass.
 }
+namespace Octopus.TinyTypes
+{
+    public class CaseInsensitiveStringTinyType { }
+}
 ";
         // stick these all on a single line to not interfere with diagnostic line location
         public static readonly string Usings = string.Join("",
@@ -382,7 +409,8 @@ namespace Octopus.Server.MessageContracts.Features.Spaces
                 "System.ComponentModel.DataAnnotations",
                 "Octopus.Server.MessageContracts.Base",
                 "Octopus.Server.MessageContracts.Base.Attributes",
-                "Octopus.Server.MessageContracts.Features.Spaces"
+                "Octopus.Server.MessageContracts.Features.Spaces",
+                "Octopus.TinyTypes"
             }.Select(s => $"using {s};"));
     }
 }
