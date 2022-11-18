@@ -72,6 +72,11 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
+
+    /// <summary>command v1</summary>
+    public class SimpleCommandV1 : ICommand<SimpleCommandV1, SimpleResponseV1> { }
+    /// <summary>response v1</summary>
+    public class SimpleResponseV1 : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
@@ -104,6 +109,34 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 
             await Verify.VerifyAnalyzerAsync(source);
         }
+        
+        [Test]
+        public async Task NoDiagnosticsOnWellFormedEvent()
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class SimpleEvent : IEvent { }
+    public class SimpleEventV1 : IEvent { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source);
+        }
+        
+        [Test]
+        public async Task EventTypesMustBeNamedCorrectly()
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class EventWhichIsSimple: IEvent { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source, 
+                new DiagnosticResult(MessageContractAnalyzers.EventTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 36));
+        }
 
         [Test]
         public async Task RequestTypesMustBeNamedCorrectly()
@@ -118,9 +151,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithSpan(5, 18, 5, 31);
-
-            await Verify.VerifyAnalyzerAsync(source, nameResult);
+            await Verify.VerifyAnalyzerAsync(source, 
+                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithSpan(5, 18, 5, 31));
         }
 
         [Test]
@@ -172,12 +204,15 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResult> { }
     /// <summary>response</summary>
     public class SimpleResult : IResponse { }
+
+    /// <summary>requestV1</summary>
+    public class SimpleRequestV1: IRequest<SimpleRequestV1, SimpleResult> { } // requestV1 must have matching responseV1
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(5, 18, 5, 31);
-
-            await Verify.VerifyAnalyzerAsync(source, nameResult);
+            await Verify.VerifyAnalyzerAsync(source, 
+                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(5, 18, 5, 31),
+                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(10, 18, 10, 33));
         }
 
         [Test]
@@ -426,30 +461,112 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
                 new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithSpan(5, 18, 5, 36),
                 new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithSpan(6, 18, 6, 37));
         }
+
+        // ApiContractTypes is broader than just IRequest, ICommand and IResponse,
+        // see IsAnApiContractType in MessageContractConventions.cs in the server
+        // it also includes IEvent, subclasses of Resource and anything in the Octopus.Server.MessageContracts namespace
+        // that last namespace one is a doozy, but we don't have to check it here.
+        [Test]
+        public async Task ApiContractTypes_MustLiveInTheAppropriateNamespace()
+        {
+            var source = Common.Usings + @"
+// rookie mistake: putting the messagecontracts in the same place as the controller. These should all flag
+namespace Octopus.Server.Web.Controllers.Something
+{
+    /// <summary>a command</summary>
+    public class SomeCommand: ICommand<SomeCommand, SomeResponse> { }
+    /// <summary>a request</summary>
+    public class SomeRequest: IRequest<SomeRequest, SomeResponse> { }
+    /// <summary>a response</summary>
+    public class SomeResponse : IResponse { }
+
+    public class SomeEvent : IEvent { }
+    public class SomeResource : Resource { }
+}
+// rookie mistake #2: putting the messagecontracts in the same place as the handler. These should all flag
+namespace Octopus.Core.Features.Something
+{
+    /// <summary>a command</summary>
+    public class SomeCommand: ICommand<SomeCommand, SomeResponse> { }
+    /// <summary>a request</summary>
+    public class SomeRequest: IRequest<SomeRequest, SomeResponse> { }
+    /// <summary>a response</summary>
+    public class SomeResponse : IResponse { }
+
+    public class SomeEvent : IEvent { }
+    public class SomeResource : Resource { }
+}
+// should not flag on any of these
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    /// <summary>a command</summary>
+    public class SomeCommand: ICommand<SomeCommand, SomeResponse> { }
+    /// <summary>a request</summary>
+    public class SomeRequest: IRequest<SomeRequest, SomeResponse> { }
+    /// <summary>a response</summary>
+    public class SomeResponse : IResponse { }
+
+    public class SomeEvent : IEvent { }
+    public class SomeResource : Resource { }
+}
+// or these
+namespace Octopus.Core.MessageContracts
+{
+    /// <summary>a command</summary>
+    public class SomeCommand: ICommand<SomeCommand, SomeResponse> { }
+    /// <summary>a request</summary>
+    public class SomeRequest: IRequest<SomeRequest, SomeResponse> { }
+
+    /// <summary>a response</summary>
+    public class SomeResponse : IResponse { }
+    public class SomeEvent : IEvent { }
+    public class SomeResource : Resource { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(6, 18, 6, 29),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(8, 18, 8, 29),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(10, 18, 10, 30),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(12, 18, 12, 27),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(13, 18, 13, 30),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(19, 18, 19, 29),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(21, 18, 21, 29),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(23, 18, 23, 30),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(25, 18, 25, 27),
+                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithSpan(26, 18, 26, 30));
+        }
     }
 
     static class Common
     {
-        // Declarations copied verbatim from MessageContracts
+        // Declarations copied from MessageContracts. We need the names and structure to match exactly but the implementations
+        // are irrelevant so we don't replicate them here (e.g. the fact that the Resource class implements IResource and stuff like that)
         public static readonly string MessageTypeDeclarations = @"
-namespace Octopus.Server.MessageContracts.Base
+namespace Octopus.Server.MessageContracts
 {
-  public interface IRequest<TRequest, TResponse> where TRequest : IRequest<TRequest, TResponse> where TResponse : IResponse { }
-  public interface ICommand<TCommand, TResponse> where TCommand : ICommand<TCommand, TResponse> where TResponse : IResponse { }
-  public interface IResponse { }
+  public interface IEvent { }
+  public abstract class Resource { }
 
-  namespace Attributes
+  namespace Base
   {
-    public sealed class OptionalAttribute : ValidationAttribute { } // not quite verbatim for this but it doesn't matter
+    public interface IRequest<TRequest, TResponse> where TRequest : IRequest<TRequest, TResponse> where TResponse : IResponse { }
+    public interface ICommand<TCommand, TResponse> where TCommand : ICommand<TCommand, TResponse> where TResponse : IResponse { }
+    public interface IResponse { }
+
+    namespace Attributes
+    {
+      public sealed class OptionalAttribute : ValidationAttribute { } // not quite verbatim for this but it doesn't matter
+    }
   }
 }
 namespace Octopus.Server.MessageContracts.Features.Spaces
 {
-    public class SpaceId {} // doesn't need any actual behaviour for the analyzer to pass.
+  public class SpaceId {} // doesn't need any actual behaviour for the analyzer to pass.
 }
 namespace Octopus.TinyTypes
 {
-    public class CaseInsensitiveStringTinyType { }
+  public class CaseInsensitiveStringTinyType { }
 }
 ";
         // stick these all on a single line to not interfere with diagnostic line location
@@ -459,6 +576,7 @@ namespace Octopus.TinyTypes
                 "System",
                 "System.Collections.Generic",
                 "System.ComponentModel.DataAnnotations",
+                "Octopus.Server.MessageContracts",
                 "Octopus.Server.MessageContracts.Base",
                 "Octopus.Server.MessageContracts.Base.Attributes",
                 "Octopus.Server.MessageContracts.Features.Spaces",

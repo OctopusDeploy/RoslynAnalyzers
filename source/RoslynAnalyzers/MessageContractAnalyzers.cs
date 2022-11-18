@@ -19,18 +19,26 @@ namespace Octopus.RoslynAnalyzers
 
         const string Category = "Octopus";
 
+        internal static readonly DiagnosticDescriptor EventTypesMustBeNamedCorrectly = new(
+            "Octopus_EventTypesMustBeNamedCorrectly",
+            "Event types must either end with Event or EventV[versionNumber]",
+            "Event types must either end with Event or EventV[versionNumber]",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+        
         internal static readonly DiagnosticDescriptor CommandTypesMustBeNamedCorrectly = new(
             "Octopus_CommandTypesMustBeNamedCorrectly",
-            "Types that implement ICommand must be named correctly",
-            "Types that implement ICommand must be called <thing>Command",
+            "Command types must either end with Command or CommandV[versionNumber]",
+            "Command types must either end with Command or CommandV[versionNumber]",
             Category,
             DiagnosticSeverity.Error,
             true);
 
         internal static readonly DiagnosticDescriptor RequestTypesMustBeNamedCorrectly = new(
             "Octopus_RequestTypesMustBeNamedCorrectly",
-            "Types that implement IRequest must be named correctly",
-            "Types that implement IRequest must be called <thing>Request",
+            "Request types must either end with Request or RequestV[versionNumber]",
+            "Request types must either end with Request or RequestV[versionNumber]",
             Category,
             DiagnosticSeverity.Error,
             true);
@@ -38,7 +46,7 @@ namespace Octopus.RoslynAnalyzers
         internal static readonly DiagnosticDescriptor CommandTypesMustHaveCorrectlyNamedResponseTypes = new(
             "Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes",
             "Types that implement ICommand must have responses with matching names",
-            "Types that implement ICommand have response types called <thing>Response",
+            "Types that implement ICommand must have responses with matching names",
             Category,
             DiagnosticSeverity.Error,
             true);
@@ -46,7 +54,7 @@ namespace Octopus.RoslynAnalyzers
         internal static readonly DiagnosticDescriptor RequestTypesMustHaveCorrectlyNamedResponseTypes = new(
             "Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes",
             "Types that implement IRequest must have responses with matching names",
-            "Types that implement IRequest have response types called <thing>Response",
+            "Types that implement IRequest must have responses with matching names",
             Category,
             DiagnosticSeverity.Error,
             true);
@@ -138,8 +146,23 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
             true,
             @"We want to be able to auto-generate our swagger docs, but also make it nice and easy for both internal
  and external developers to code against the api.");
+        
+        internal static readonly DiagnosticDescriptor ApiContractTypesMustLiveInTheAppropriateNamespace = new(
+            "Octopus_ApiContractTypesMustLiveInTheAppropriateNamespace",
+            "Contracts must live in either the Octopus.Server.MessageContracts project or (temporarily) under some namespace containing MessageContracts.",
+            "Contracts must live in either the Octopus.Server.MessageContracts project or (temporarily) under some namespace containing MessageContracts.",
+            Category,
+            DiagnosticSeverity.Error,
+            true,
+            @"These exceptions are temporary, and only until the dependency consolidation work brings the Octopus.Server.MessageContracts
+project back into this Git repository and C# solution.
+- After that, all message contracts must live in the Octopus.Server.MessageContracts project.
+- Until then, message contracts may _temporarily_ live in the Octopus.Core project under a MessageContracts namespace
+  related to that feature to at least indicate that it's a temporary location,
+  e.g. Octopus.Core.Features.FooFeature.MessageContracts..");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
+            EventTypesMustBeNamedCorrectly,
             CommandTypesMustBeNamedCorrectly,
             RequestTypesMustBeNamedCorrectly,
             CommandTypesMustHaveCorrectlyNamedResponseTypes,
@@ -151,7 +174,8 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
             PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
             SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId,
             IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType,
-            MessageTypesMustHaveXmlDocComments);
+            MessageTypesMustHaveXmlDocComments,
+            ApiContractTypesMustLiveInTheAppropriateNamespace);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -180,12 +204,15 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
             context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
 
+        static readonly Regex EventNameRegex = new("(?<!V\\d+)Event(V\\d+)?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         static readonly Regex RequestNameRegex = new("(?<!V\\d+)Request(V\\d+)*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         static readonly Regex CommandNameRegex = new("(?<!V\\d+)Command(V\\d+)*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         const string TypeNameIRequest = "IRequest";
         const string TypeNameICommand = "ICommand";
         const string TypeNameIResponse = "IResponse";
+        const string TypeNameIEvent = "IEvent";
+        const string TypeNameResource = "Resource";
 
         static void CheckNode(SyntaxNodeAnalysisContext context)
         {
@@ -195,7 +222,7 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
                 // In practice this should be fine, we don't have other ICommand<> or IRequest<> types running around our codebase and the namespace check is more work to do.
 
                 GenericNameSyntax? requestOrCommandDec = null;
-                IdentifierNameSyntax? responseDec = null;
+                IdentifierNameSyntax? responseEventOrResourceDec = null;
                 foreach (var baseTypeDec in typeDec.BaseList?.ChildNodes().OfType<SimpleBaseTypeSyntax>() ?? Enumerable.Empty<SimpleBaseTypeSyntax>())
                 {
                     foreach (var c in baseTypeDec.ChildNodes())
@@ -205,20 +232,29 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
                             case GenericNameSyntax { Identifier.Text: TypeNameIRequest or TypeNameICommand } g:
                                 requestOrCommandDec = g;
                                 break;
-                            case IdentifierNameSyntax { Identifier.Text: TypeNameIResponse } i:
-                                responseDec = i;
+                            case IdentifierNameSyntax { Identifier.Text: TypeNameIResponse or TypeNameIEvent or TypeNameResource } i:
+                                responseEventOrResourceDec = i;
                                 break;
                         }
                     }
                 }
 
-                if (requestOrCommandDec != null || responseDec != null)
+                if (requestOrCommandDec != null || responseEventOrResourceDec != null)
                 {
-                    // this is a "MessageType"; either request, command, or response
-                    CheckProperties(context, typeDec);
-                    MessageTypes_MustHaveXmlDocComments(context, typeDec);
-                }
+                    // this is an "API Surface" type; either (request, command, response) or event or resource
+                    // note technically everything else in the Octopus.Server.MessageContracts namespace is also an "API surface" type, 
+                    // but verifying that would be more expensive and we don't need to do it yet
 
+                    ApiContractTypes_MustLiveInTheAppropriateNamespace(context, typeDec);
+                    
+                    if (requestOrCommandDec != null || responseEventOrResourceDec?.Identifier.Text == TypeNameIResponse)
+                    {
+                        // this is a "MessageType"; either request, command, or response
+                        CheckProperties(context, typeDec);
+                        MessageTypes_MustHaveXmlDocComments(context, typeDec);
+                    }
+                }
+                
                 // request/command/response specific
                 switch (requestOrCommandDec?.Identifier.Text)
                 {
@@ -231,6 +267,11 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
                         if (RequestTypes_MustBeNamedCorrectly(context, typeDec))
                             RequestTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, requestOrCommandDec); // the expected response name depends on the request name; so only run this check if the RequestName was good
                         break;
+                }
+
+                if (responseEventOrResourceDec?.Identifier.Text == TypeNameIEvent)
+                {
+                    EventTypes_MustBeNamedCorrectly(context, typeDec);
                 }
             }
         }
@@ -262,37 +303,67 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
             return result;
         }
 
-        enum RequiredState
+        static bool ApiContractTypes_MustLiveInTheAppropriateNamespace(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
-            Unspecified,
-            Optional,
-            Required,
-        }
+            var ns = GetNamespace(typeDec);
+            if (ns == "") return true; // skip if we can't determine the namespace
 
-        static RequiredState GetRequiredState(PropertyDeclarationSyntax propDec)
-        {
-            var attrNames = propDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
-
-            foreach (var attrName in attrNames)
+            if (ns.StartsWith("Octopus.Server.MessageContracts") ||
+                (ns.StartsWith("Octopus.Server.Extensibility") && ns.EndsWith(".MessageContracts")) ||
+                // this last one is a temporary exemption until the dependency consolidation work brings the Octopus.Server.MessageContracts
+                // back into the main git repository. Remove it after that work completes
+                (ns.StartsWith("Octopus.Core") && ns.Contains("MessageContracts")))
             {
-                // it has an attribute called Required. Not necessarily the one from System.ComponentModel.DataAnnotations but good enough.
-                // Note: we could resolve the full type which is more expensive, it's unclear as to whether that makes a difference or not
-                if (attrName == "Required") return RequiredState.Required;
-                // it has an attribute called Optional. Not necessarily the one from Octopus.MessageContracts.Attribute but good enough.
-                if (attrName == "Optional") return RequiredState.Optional;
+                // we're good
+                return true;
             }
 
-            return RequiredState.Unspecified;
+            context.ReportDiagnostic(Diagnostic.Create(ApiContractTypesMustLiveInTheAppropriateNamespace, typeDec.Identifier.GetLocation()));
+            return false;
         }
-
-        static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        
+        static string GetNamespace(TypeDeclarationSyntax syntax)
         {
-            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
+            // If we don't have a namespace at all we'll return an empty string
+            // This accounts for the "default namespace" case
+            string nameSpace = string.Empty;
 
-            var typeInfo = context.SemanticModel.GetTypeInfo(propType);
-            if (typeInfo.Type == null) return false;
+            // Get the containing syntax node for the type declaration
+            // (could be a nested type, for example)
+            SyntaxNode? potentialNamespaceParent = syntax.Parent;
+    
+            // Keep moving "out" of nested classes etc until we get to a namespace
+            // or until we run out of parents
+            while (potentialNamespaceParent != null &&
+                   potentialNamespaceParent is not NamespaceDeclarationSyntax
+                   && potentialNamespaceParent is not FileScopedNamespaceDeclarationSyntax)
+            {
+                potentialNamespaceParent = potentialNamespaceParent.Parent;
+            }
 
-            return typeInfo.Type.IsAssignableTo(cachedTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.String);
+            // Build up the final namespace by looping until we no longer have a namespace declaration
+            if (potentialNamespaceParent is BaseNamespaceDeclarationSyntax namespaceParent)
+            {
+                // We have a namespace. Use that as the type
+                nameSpace = namespaceParent.Name.ToString();
+        
+                // Keep moving "out" of the namespace declarations until we 
+                // run out of nested namespace declarations
+                while (true)
+                {
+                    if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent)
+                    {
+                        break;
+                    }
+
+                    // Add the outer namespace as a prefix to the final namespace
+                    nameSpace = $"{namespaceParent.Name}.{nameSpace}";
+                    namespaceParent = parent;
+                }
+            }
+
+            // return the final namespace
+            return nameSpace;
         }
 
         static bool PropertiesOnMessageTypes_MustBeMutable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
@@ -404,6 +475,15 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
             return true;
         }
 
+        static bool EventTypes_MustBeNamedCorrectly(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
+        {
+            if (EventNameRegex.IsMatch(typeDec.Identifier.Text))
+                return true;
+
+            context.ReportDiagnostic(Diagnostic.Create(EventTypesMustBeNamedCorrectly, typeDec.Identifier.GetLocation()));
+            return false;
+        }
+        
         static bool CommandTypes_MustBeNamedCorrectly(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             if (CommandNameRegex.IsMatch(typeDec.Identifier.Text))
@@ -439,6 +519,40 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
 
         // ----- helpers --------------- 
 
+        
+        enum RequiredState
+        {
+            Unspecified,
+            Optional,
+            Required,
+        }
+
+        static RequiredState GetRequiredState(PropertyDeclarationSyntax propDec)
+        {
+            var attrNames = propDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
+
+            foreach (var attrName in attrNames)
+            {
+                // it has an attribute called Required. Not necessarily the one from System.ComponentModel.DataAnnotations but good enough.
+                // Note: we could resolve the full type which is more expensive, it's unclear as to whether that makes a difference or not
+                if (attrName == "Required") return RequiredState.Required;
+                // it has an attribute called Optional. Not necessarily the one from Octopus.MessageContracts.Attribute but good enough.
+                if (attrName == "Optional") return RequiredState.Optional;
+            }
+
+            return RequiredState.Unspecified;
+        }
+
+        static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        {
+            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
+
+            var typeInfo = context.SemanticModel.GetTypeInfo(propType);
+            if (typeInfo.Type == null) return false;
+
+            return typeInfo.Type.IsAssignableTo(cachedTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.String);
+        }
+        
         // typeDec is the Request/Command concrete class declaration
         // genericDec is the <TRequest, TResponse> part of the IRequest/Command declaration
         static bool CheckResponseTypeName(SyntaxNodeAnalysisContext context,
