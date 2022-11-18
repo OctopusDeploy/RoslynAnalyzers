@@ -16,6 +16,7 @@ namespace Tests
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest : IRequest<SimpleRequest, SimpleResponse>
     {
         protected SimpleRequest() { }
@@ -40,7 +41,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public List<string> OptionalStringList { get; set; } = new(); 
     }
-
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
@@ -54,6 +55,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>command</summary>
     public class SimpleCommand : ICommand<SimpleCommand, SimpleResponse>
     {
         protected SimpleCommand() { }
@@ -68,7 +70,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public string? OptionalString { get; set; }
     }
-
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
@@ -82,6 +84,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse 
     {
         protected SimpleResponse() { }
@@ -108,12 +111,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleCommand: IRequest<SimpleCommand, SimpleResponse> { }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithSpan(5, 18, 5, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -124,7 +129,9 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class RequestSimple: ExtraneousBaseClass, ISomethingElse, IRequest<RequestSimple, SimpleResponse> { }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 
     public interface ISomethingElse { }
@@ -132,7 +139,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithSpan(5, 18, 5, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -143,12 +150,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest : ICommand<SimpleRequest, SimpleResponse> { }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
-            var result = new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustBeNamedCorrectly).WithSpan(4, 18, 4, 31);
+            var result = new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustBeNamedCorrectly).WithSpan(5, 18, 5, 31);
 
             await Verify.VerifyAnalyzerAsync(source, result);
         }
@@ -159,12 +168,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResult> { }
+    /// <summary>response</summary>
     public class SimpleResult : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(4, 18, 4, 31);
+            var nameResult = new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(5, 18, 5, 31);
 
             await Verify.VerifyAnalyzerAsync(source, nameResult);
         }
@@ -175,15 +186,17 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>command</summary>
     public class SimpleCommand: ICommand<SimpleCommand, SimpleResult>
     { }
+    /// <summary>result</summary>
     public class SimpleResult : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
-            var nameResult = new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(4, 18, 4, 31);
 
-            await Verify.VerifyAnalyzerAsync(source, nameResult);
+            await Verify.VerifyAnalyzerAsync(source, 
+                new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustHaveCorrectlyNamedResponseTypes).WithSpan(5, 18, 5, 31));
         }
         
         [Test]
@@ -192,6 +205,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>command</summary>
     public class SimpleCommand: ICommand<SimpleCommand, SimpleResponse> 
     {
         [Optional]
@@ -200,13 +214,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public string? ComputedProp => GetOnlyProp?.ToUpperInvariant();
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(10, 24, 10, 36),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(7, 24, 7, 35));
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(11, 24, 11, 36),
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithSpan(8, 24, 8, 35));
         }
 
         [Test]
@@ -215,6 +230,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         protected SimpleRequest() {}
@@ -226,13 +242,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Required]
         public int? IntProperty { get; set; }
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithSpan(10, 24, 10, 38),
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithSpan(13, 21, 13, 32));
+                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithSpan(11, 24, 11, 38),
+                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithSpan(14, 21, 14, 32));
         }
 
         [Test]
@@ -241,6 +258,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         [Optional]
@@ -252,13 +270,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public string[] StringListProperty { get; set; } = null; // should NOT fire on this because optional nonnull collections are allowed
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithSpan(7, 23, 7, 37),
-                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithSpan(10, 20, 10, 31));
+                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithSpan(8, 23, 8, 37),
+                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithSpan(11, 20, 11, 31));
         }
 
         [Test]
@@ -267,6 +286,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         protected SimpleRequest() { }
@@ -296,13 +316,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public string[] StringArrayPropertyInstantiated { get; set; } = Array.Empty<string>(); // should not fire on this; collection is instantiated
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(16, 29, 16, 47),
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(19, 25, 19, 44));
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(17, 29, 17, 47),
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithSpan(20, 25, 20, 44));
         }
 
         [Test]
@@ -311,6 +332,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         public string? StringProperty { get; set; }
@@ -320,13 +342,14 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public int? OptionalIntProperty { get; set; } // should not fire on this
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(6, 24, 6, 38),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(8, 21, 8, 32));
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(7, 24, 7, 38),
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithSpan(9, 21, 9, 32));
         }
         
         [Test]
@@ -335,11 +358,13 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         [Optional]
         public SpaceId? SpaceId { get; set; } // should not fire on this
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse 
     {
         [Optional]
@@ -349,7 +374,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId).WithSpan(12, 24, 12, 31));
+                new DiagnosticResult(MessageContractAnalyzers.SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId).WithSpan(14, 24, 14, 31));
         }
         
         [Test]
@@ -358,6 +383,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             var source = Common.Usings + @"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
 {
+    /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         [Optional]
@@ -366,13 +392,39 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         [Optional]
         public ProjectId? ProjectId { get; set; } // should not fire on this
     }
+    /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
     public class ProjectId : CaseInsensitiveStringTinyType { }
 }
 " + Common.MessageTypeDeclarations;
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType).WithSpan(7, 24, 7, 37));
+                new DiagnosticResult(MessageContractAnalyzers.IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType).WithSpan(8, 24, 8, 37));
+        }
+        
+        [Test]
+        public async Task MessageTypesMustHaveXmlDocComments()
+        {
+            var source = Common.Usings + @"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    public class UncommentedCommand: ICommand<UncommentedCommand, UncommentedResponse> { }
+    public class UncommentedRequest: IRequest<UncommentedRequest, UncommentedResponse> { }
+    public class UncommentedResponse : IResponse { }
+
+    /// <summary>a command</summary>
+    public class CommentedCommand: ICommand<CommentedCommand, CommentedResponse> { }
+    /// <summary>a request</summary>
+    public class CommentedRequest: IRequest<CommentedRequest, CommentedResponse> { }
+    /// <summary>a response</summary>
+    public class CommentedResponse : IResponse { }
+}
+" + Common.MessageTypeDeclarations;
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithSpan(4, 18, 4, 36),
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithSpan(5, 18, 5, 36),
+                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithSpan(6, 18, 6, 37));
         }
     }
 

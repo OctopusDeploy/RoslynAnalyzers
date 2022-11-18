@@ -128,6 +128,16 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             @"All Id properties on message contracts should be CaseInsensitiveStringTinyTypes.
 We want to avoid stringly typed Ids as they can be mixed up. This convention encourages their use.
 If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Area/Document/EntityName].MessageContracts");
+        
+        internal static readonly DiagnosticDescriptor MessageTypesMustHaveXmlDocComments = new(
+            "Octopus_MessageTypesMustHaveXmlDocComments",
+            "Message Types must have XMLDoc Comments",
+            "Message Types must have XMLDoc Comments",
+            Category,
+            DiagnosticSeverity.Error,
+            true,
+            @"We want to be able to auto-generate our swagger docs, but also make it nice and easy for both internal
+ and external developers to code against the api.");
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
             CommandTypesMustBeNamedCorrectly,
@@ -140,7 +150,8 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
             MessageTypesMustInstantiateCollections,
             PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
             SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId,
-            IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType);
+            IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType,
+            MessageTypesMustHaveXmlDocComments);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -205,6 +216,7 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
                 {
                     // this is a "MessageType"; either request, command, or response
                     CheckProperties(context, typeDec);
+                    MessageTypes_MustHaveXmlDocComments(context, typeDec);
                 }
 
                 // request/command/response specific
@@ -339,6 +351,18 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
                 return false;
             }
 
+            return true;
+        }
+
+        static bool MessageTypes_MustHaveXmlDocComments(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
+        {
+            var symbol = context.SemanticModel.GetDeclaredSymbol(typeDec, cancellationToken: context.CancellationToken);
+            if(string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustHaveXmlDocComments, typeDec.Identifier.GetLocation()));
+                return false;
+            }
+            
             return true;
         }
 
