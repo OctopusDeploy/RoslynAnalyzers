@@ -34,8 +34,10 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                 context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2005DoNotNestIntegrationTestContainerClasses, classSymbol.Locations.First()));
             }
 
-            foreach (var symbol in classSymbol.GetMembers().ExceptImplicitlyDeclared())
+            foreach (var symbol in classSymbol.GetMembers())
             {
+                if(symbol.IsImplicitlyDeclared) continue;
+                
                 switch (symbol)
                 {
                     case ITypeSymbol:
@@ -126,7 +128,6 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
             // we are already enforcing the symbol is readonly, so all ValueTypes are OK
             if (typeSymbol.IsValueType) return true;
 
-            // TODO what about IReadOnlyDictionary
             return typeSymbol.SpecialType switch
             {
                 SpecialType.System_Delegate => true,
