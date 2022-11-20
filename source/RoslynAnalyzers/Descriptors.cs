@@ -61,11 +61,11 @@ namespace Octopus.RoslynAnalyzers
             "added at multiple levels of the class hierarchy in a given file."
         );
 
-        public static DiagnosticDescriptor Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethods => GetTestAnalyzerDescriptor(
+        public static DiagnosticDescriptor Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData => GetTestAnalyzerDescriptor(
             "OCT2006",
-            "Integration test container classes should only contain nested types and methods",
-            "Integration test container classes should only contain integration test classes and methods, any other complex logic or state " +
-            "should be in builders, class/assembly fixtures, or some other generic helper."
+            "Integration test container classes should only contain nested types, methods and immutable data",
+            @"Integration test container classes should only contain integration test classes and methods or immutable data.
+Any other complex logic or state should be in builders, class/assembly fixtures, or some other generic helper."
         );
         
         public static DiagnosticDescriptor Oct2007IntegrationTestContainersMethodsMustBePrivate => GetTestAnalyzerDescriptor(
