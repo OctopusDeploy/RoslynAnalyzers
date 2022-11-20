@@ -64,6 +64,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                         {
                             // fields must be private
                             context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData, symbol.Locations.First()));
+                            break;
                         }
 
                         if (fieldSymbol.IsConst)
@@ -95,6 +96,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                         {
                             // fields must be private
                             context.ReportDiagnostic(Diagnostic.Create(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData, symbol.Locations.First()));
+                            break;
                         }
 
                         if (propertySymbol.IsReadOnly)
@@ -142,7 +144,7 @@ namespace Octopus.RoslynAnalyzers.Testing.Integration
                     SpecialType.System_Collections_Generic_IReadOnlyCollection_T => true,
                     SpecialType.None => namedTypeSymbol.OriginalDefinition.Name switch
                     {
-                        "IReadOnlySet" => true,
+                        "IReadOnlySet" => true, // I couldn't find an elegant way to get the fully namespaced version of these, and it wouldn't really matter anyway
                         "IReadOnlyDictionary" => true,
                         _ => false
                     },
