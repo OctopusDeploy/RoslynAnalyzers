@@ -288,6 +288,9 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 
         [Optional]
         public string[] StringListProperty { get; set; } = null; // should NOT fire on this because optional nonnull collections are allowed
+
+        [Optional]
+        public bool BoolProperty { get; set; } // should NOT fire on this because we have a special case for bool
     }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }

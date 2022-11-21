@@ -186,6 +186,7 @@ project back into this Git repository and C# solution.
 
         // ReSharper disable once InconsistentNaming
         record struct SpecialTypeDeclarations(
+            INamedTypeSymbol Boolean,
             INamedTypeSymbol String,
             INamedTypeSymbol IEnumerable,
             INamedTypeSymbol? SpaceId,
@@ -196,6 +197,7 @@ project back into this Git repository and C# solution.
         void CacheCommonTypes(CompilationStartAnalysisContext context)
         {
             cachedTypes = new SpecialTypeDeclarations(
+                Boolean: context.Compilation.GetSpecialType(SpecialType.System_Boolean),
                 String: context.Compilation.GetSpecialType(SpecialType.System_String),
                 IEnumerable: context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable),
                 SpaceId: context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId"),
@@ -393,6 +395,11 @@ project back into this Git repository and C# solution.
         {
             if (required == RequiredState.Optional && !isCollectionType && propDec.Type is not NullableTypeSyntax)
             {
+                // special-case: non-nullable bool is allowed to have implicit default of false without specifying anything.
+                // TODO @orionedwards revisit this later when we do explicit defaults properly instead
+                var typeInfo = context.SemanticModel.GetTypeInfo(propDec.Type);
+                if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.Boolean)) return true;
+                
                 // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
                 context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable, propDec.Identifier.GetLocation()));
                 return false;
