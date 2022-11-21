@@ -201,19 +201,24 @@ public static class ContainerOne
         }
 
         [TestCase]
-        public async Task DetectsIntegrationTestContainerClassesWithMembersThatAreNotTypesOrPrivateMethods()
+        public async Task IntegrationTestContainerClassMembers_ConstsAllowed()
         {
             var container = @"
-using System.Collections.Generic;
-
 public static class Container
 {
-    // ----- Constants are OK -----
-
     const string SomeConstantString = ""foo"";
 
-    // ----- Fields are only OK if they are readonly and hold a type which is known to be immutable -----
-
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes());
+        }
+        
+        [TestCase]
+        public async Task IntegrationTestContainerClassMembers_FieldsOkIfReadOnlyAndImmutable()
+        {
+            var container = @"
+public static class Container
+{
     static readonly string SomeReadOnlyString = ""foo"";
 
     // readonly ValueTypes are all OK
@@ -230,8 +235,20 @@ public static class Container
     // public = not ok
     public static readonly string {|#2:SomePublicReadOnlyString|} = ""foo"";
 
-    // ----- Properties are only OK if they are readonly and hold a type which is known to be immutable -----
-
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes(),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(0),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(1),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(2));
+        }
+        
+        [TestCase]
+        public async Task IntegrationTestContainerClassMembers_PropertiesOkIfReadOnlyAndImmutable()
+        {
+            var container = @"
+public static class Container
+{
     static string SomeReadOnlyProp { get; } = ""foo"";
 
     // readonly ValueTypes are all OK
@@ -240,71 +257,114 @@ public static class Container
     static DateTimeKind SomeReadOnlyDateTimeKindProp => DateTimeKind.Utc;
 
     // readonly reference types are not OK except for special cases like IEnumerable, IReadOnlyCollection; tested below
-    static Random {|#3:SomeReadOnlyRandomProp|} { get; } = new(); // bad; System.Random is not known to be immutable, probably unsafe to share
+    static Random {|#0:SomeReadOnlyRandomProp|} { get; } = new(); // bad; System.Random is not known to be immutable, probably unsafe to share
 
     // not readonly = not ok
-    static string {|#4:SomeMutableStringProp|} {get;set;} = ""foo""; // bad; not readonly
+    static string {|#1:SomeMutableStringProp|} {get;set;} = ""foo""; // bad; not readonly
 
     // public = not ok
-    public static string {|#5:SomePublicReadOnlyStringProp|} {get;} = ""foo"";
+    public static string {|#2:SomePublicReadOnlyStringProp|} {get;} = ""foo"";
 
-    // ----- Methods are only OK if they are nonpublic -----
-
-    public static void {|#99:SomePublicMethod|}()  { }
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes(),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(0),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(1),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(2));
+        }
+        
+        [TestCase]
+        public async Task IntegrationTestContainerClassMembers_MethodsOkIfNonPublic()
+        {
+            var container = @"
+public static class Container
+{
+    public static void {|#0:SomePublicMethod|}()  { }
 
     static void SomePrivateMethod() { }
 
-    // ----- Nested types are all OK -----
-
-    public class SomeIntegrationTest : IntegrationTest  // good, class is an integration test
-    { }
-
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes(),
+                new DiagnosticResult(Descriptors.Oct2007IntegrationTestContainersMethodsMustBePrivate).WithLocation(0));
+        }
+        
+        [TestCase]
+        public async Task IntegrationTestContainerClassMembers_NestedTypesOk()
+        {
+            var container = @"
+public static class Container
+{
     class SomeClass{ }
 
     struct SomeStruct{ }
 
     enum SomeEnum{ }
 
-    // ----- fields holding collections -----
-
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes());
+        }
+        
+        [TestCase]
+        public async Task IntegrationTestContainerClassMembers_FieldsHoldingCollectionsOkIfTypeIsImmutable()
+        {
+            var container = @"
+using System.Collections.Generic;
+public static class Container
+{
     static readonly IEnumerable<string> SomeReadonlyEnumerableOfString = new[]{ ""foo"", ""bar"" };  // good, property is immutable and nonpublic
     static readonly IReadOnlyList<string> SomeReadOnlyListOfString = new[]{ ""foo"", ""bar"" };  // good, property is immutable and nonpublic
     static readonly IReadOnlyDictionary<int, string> SomeReadOnlyDict = new Dictionary<int, string>(){ [0] = ""foo"", [1] = ""bar"" };  // good, property is immutable and nonpublic
     // static readonly IReadOnlySet<string> SomeReadOnlySet = new HashSet<string>(){ ""foo"", ""bar"" };  // good, property is immutable and nonpublic. COMMENTED: SEE NOTE
     
-    static IEnumerable<string> {|#30:SomeMutableEnumerableOfString|} = new[]{ ""foo"", ""bar"" };  // bad, property is mutable
+    static IEnumerable<string> {|#0:SomeMutableEnumerableOfString|} = new[]{ ""foo"", ""bar"" };  // bad, property is mutable
 
-    static readonly string[] {|#31:SomeArrayOfString|} = new[]{ ""foo"", ""bar"" };  // bad, property is readonly but array itself is mutable
-    static readonly List<string> {|#32:SomeListOfString|} = new(){ ""foo"", ""bar"" };  // bad, property is readonly but list itself is mutable
-    static readonly Dictionary<int, string> {|#33:SomeMutableDictionary|} = new Dictionary<int, string>(){ [0] = ""foo"", [1] = ""bar"" }; // bad, property is readonly but list itself is mutable
-    static readonly HashSet<string> {|#34:SomeMutableSet|} = new HashSet<string>(){ ""foo"", ""bar"" }; // bad, property is readonly but list itself is mutable
+    static readonly string[] {|#1:SomeArrayOfString|} = new[]{ ""foo"", ""bar"" };  // bad, property is readonly but array itself is mutable
+    static readonly List<string> {|#2:SomeListOfString|} = new(){ ""foo"", ""bar"" };  // bad, property is readonly but list itself is mutable
+    static readonly Dictionary<int, string> {|#3:SomeMutableDictionary|} = new Dictionary<int, string>(){ [0] = ""foo"", [1] = ""bar"" }; // bad, property is readonly but list itself is mutable
+    static readonly HashSet<string> {|#4:SomeMutableSet|} = new HashSet<string>(){ ""foo"", ""bar"" }; // bad, property is readonly but list itself is mutable
 
-    // properties holding collections not explicitly tested because it's the same logic as fields
-}
-";
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
             // IReadOnlySet Note: Our DLL targets netstandard2.0, with the comment "As at Feb 2021 anything later than netstandard 2.0 doesn't work in Visual Studio".
             // IReadOnlySet was added in .NET 5 so isn't in netstandard2.0, so, while it works in the real world, we can't hit it with unit tests
-            var oct2006 = Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData;
-            var oct2007 = Descriptors.Oct2007IntegrationTestContainersMethodsMustBePrivate;
-
-            var source = container.WithTestingTypes();
-            Console.WriteLine(source); // to help with debugging
             
-            await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(oct2006).WithLocation(0),
-                new DiagnosticResult(oct2006).WithLocation(1),
-                new DiagnosticResult(oct2006).WithLocation(2),
-                new DiagnosticResult(oct2006).WithLocation(3),
-                new DiagnosticResult(oct2006).WithLocation(4),
-                new DiagnosticResult(oct2006).WithLocation(5),
-                
-                new DiagnosticResult(oct2006).WithLocation(30),
-                new DiagnosticResult(oct2006).WithLocation(31),
-                new DiagnosticResult(oct2006).WithLocation(32),
-                new DiagnosticResult(oct2006).WithLocation(33),
-                new DiagnosticResult(oct2006).WithLocation(34),
-                
-                new DiagnosticResult(oct2007).WithLocation(99));
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes(),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(0),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(1),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(2),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(3),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(4));
+        }
+        
+        [TestCase]
+        public async Task IntegrationTestContainerClassMembers_PropertiesHoldingCollectionsOkIfTypeIsImmutable()
+        {
+            var container = @"
+using System.Collections.Generic;
+public static class Container
+{
+    static IEnumerable<string> SomeReadonlyEnumerableOfString {get;} = new[]{ ""foo"", ""bar"" };  // good, property is immutable and nonpublic
+    static IReadOnlyList<string> SomeReadOnlyListOfString {get;} = new[]{ ""foo"", ""bar"" };  // good, property is immutable and nonpublic
+    static IReadOnlyDictionary<int, string> SomeReadOnlyDict {get;} = new Dictionary<int, string>(){ [0] = ""foo"", [1] = ""bar"" };  // good, property is immutable and nonpublic
+    // static IReadOnlySet<string> SomeReadOnlySet {get;} = new HashSet<string>(){ ""foo"", ""bar"" };  // good, property is immutable and nonpublic. COMMENTED: SEE NOTE
+   
+    static string[] {|#0:SomeArrayOfString|} {get;} = new[]{ ""foo"", ""bar"" };  // bad, property is readonly but array itself is mutable
+    static List<string> {|#1:SomeListOfString|} {get;} = new(){ ""foo"", ""bar"" };  // bad, property is readonly but list itself is mutable
+    static Dictionary<int, string> {|#2:SomeMutableDictionary|} {get;} = new Dictionary<int, string>(){ [0] = ""foo"", [1] = ""bar"" }; // bad, property is readonly but list itself is mutable
+    static HashSet<string> {|#3:SomeMutableSet|} {get;} = new HashSet<string>(){ ""foo"", ""bar"" }; // bad, property is readonly but list itself is mutable
+
+    public class SomeIntegrationTest : IntegrationTest { } // always need this to trigger container-class logic
+}";
+            // IReadOnlySet Note: Our DLL targets netstandard2.0, with the comment "As at Feb 2021 anything later than netstandard 2.0 doesn't work in Visual Studio".
+            // IReadOnlySet was added in .NET 5 so isn't in netstandard2.0, so, while it works in the real world, we can't hit it with unit tests
+            
+            await Verify.VerifyAnalyzerAsync(container.WithTestingTypes(),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(0),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(1),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(2),
+                new DiagnosticResult(Descriptors.Oct2006IntegrationTestContainersMustOnlyContainTypesAndMethodsAndImmutableData).WithLocation(3));
         }
     }
 }
