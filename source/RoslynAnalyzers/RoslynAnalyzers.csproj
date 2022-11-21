@@ -12,7 +12,7 @@
     <NoWarn>RS2008</NoWarn>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- At the time of writing anything later than netstandard 2.0 doesn't work in Visual Studio -->
+    <!-- As at Feb 2021 anything later than netstandard 2.0 doesn't work in Visual Studio -->
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Description>Octopus Deploy Roslyn analyzers</Description>
