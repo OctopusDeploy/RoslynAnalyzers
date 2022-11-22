@@ -199,8 +199,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(1));
+                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0).WithArguments("SimpleResponse", "SimpleResult"),
+                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(1).WithArguments("SimpleResponseV1", "SimpleResult"));
         }
 
         [Test]
@@ -217,7 +217,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0));
+                new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0).WithArguments("SimpleResponse", "SimpleResult"));
         }
 
         [Test]
@@ -240,8 +240,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithLocation(1));
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithLocation(0).WithArguments("GetOnlyProp"),
+                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithLocation(1).WithArguments("ComputedProp"));
         }
 
         [Test]
@@ -254,21 +254,25 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
         protected SimpleRequest() {}
-        public SimpleRequest(string s, int i) { StringProperty = s; IntProperty = i; }
+        public SimpleRequest(string s, int i, IComparable comp) { StringProperty = s; IntProperty = i; ComparableProperty = comp; }
 
         [Required]
         public string? {|#0:StringProperty|} { get; set; }
 
         [Required]
         public int? {|#1:IntProperty|} { get; set; }
+
+        [Required]
+        public IComparable? {|#2:ComparableProperty|} { get; set; }
     }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(1));
+                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
+                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(1).WithArguments("IntProperty", "int"),
+                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(2).WithArguments("ComparableProperty", "IComparable"));
         }
 
         [Test]
@@ -297,8 +301,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(1));
+                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
+                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(1).WithArguments("IntProperty", "int"));
         }
 
         [Test]

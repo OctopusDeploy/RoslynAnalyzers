@@ -12,6 +12,7 @@ namespace Octopus.RoslynAnalyzers
     // Once we establish that a type is a "Message" (that is, it implements ICommand<>, IRequest<> or IResponse) then
     // there's a whole variety of things that we want to assert against. We put them all in one analyzer to avoid the extra work that would
     // be incurred if we had a dozen analyzers all going "is this a MessageType"?
+    // MessageContractAnalyzers use the ID range OCT3xxx
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class MessageContractAnalyzers : DiagnosticAnalyzer
     {
@@ -20,7 +21,7 @@ namespace Octopus.RoslynAnalyzers
         const string Category = "Octopus";
 
         internal static readonly DiagnosticDescriptor EventTypesMustBeNamedCorrectly = new(
-            "Octopus_EventTypesMustBeNamedCorrectly",
+            "OCT3001",
             "Event types must either end with Event or EventV[versionNumber]",
             "Event types must either end with Event or EventV[versionNumber]",
             Category,
@@ -28,7 +29,7 @@ namespace Octopus.RoslynAnalyzers
             true);
         
         internal static readonly DiagnosticDescriptor CommandTypesMustBeNamedCorrectly = new(
-            "Octopus_CommandTypesMustBeNamedCorrectly",
+            "OCT3002",
             "Command types must either end with Command or CommandV[versionNumber]",
             "Command types must either end with Command or CommandV[versionNumber]",
             Category,
@@ -36,7 +37,7 @@ namespace Octopus.RoslynAnalyzers
             true);
 
         internal static readonly DiagnosticDescriptor RequestTypesMustBeNamedCorrectly = new(
-            "Octopus_RequestTypesMustBeNamedCorrectly",
+            "OCT3003",
             "Request types must either end with Request or RequestV[versionNumber]",
             "Request types must either end with Request or RequestV[versionNumber]",
             Category,
@@ -44,25 +45,25 @@ namespace Octopus.RoslynAnalyzers
             true);
 
         internal static readonly DiagnosticDescriptor CommandTypesMustHaveCorrectlyNamedResponseTypes = new(
-            "Octopus_CommandTypesMustHaveCorrectlyNamedResponseTypes",
+            "OCT3004",
             "Types that implement ICommand must have responses with matching names",
-            "Types that implement ICommand must have responses with matching names",
+            "Response type should be \"{0}\" instead of \"{1}\" (Types that implement ICommand must have responses with matching names)",
             Category,
             DiagnosticSeverity.Error,
             true);
 
         internal static readonly DiagnosticDescriptor RequestTypesMustHaveCorrectlyNamedResponseTypes = new(
-            "Octopus_RequestTypesMustHaveCorrectlyNamedResponseTypes",
+            "OCT3005",
             "Types that implement IRequest must have responses with matching names",
-            "Types that implement IRequest must have responses with matching names",
+            "Response type should be \"{0}\" instead of \"{1}\" (Types that implement IRequest must have responses with matching names)",
             Category,
             DiagnosticSeverity.Error,
             true);
 
         internal static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustBeMutable = new(
-            "Octopus_PropertiesOnMessageTypesMustBeMutable",
-            "Properties on MessageTypes must be Mutable",
+            "OCT3006",
             "Properties on MessageTypes must be Mutable.",
+            "Property \"{0}\" should have a setter (Properties on MessageTypes must be Mutable)",
             Category,
             DiagnosticSeverity.Error,
             true,
@@ -75,9 +76,9 @@ The tradeoff here is that we sacrifice some encapsulation and correctness for si
 But what if someone messes with a payload after it comes off the wire? Please don't do this - you know better :) ");
 
         internal static readonly DiagnosticDescriptor RequiredPropertiesOnMessageTypesMustNotBeNullable = new(
-            "Octopus_RequiredPropertiesOnMessageTypesMustNotBeNullable",
+            "OCT3007",
             "Required Properties on MessageTypes must not be nullable",
-            "Required Properties on MessageTypes must not be nullable.",
+            "Property \"{0}\" should be of type {1} (Required Properties on MessageTypes must not be nullable)",
             Category,
             DiagnosticSeverity.Error,
             true,
@@ -85,9 +86,9 @@ But what if someone messes with a payload after it comes off the wire? Please do
 This convention enforces that all optional properties must be not-nullable, so that consumers of the type know they can safely dereference the information in these properties.");
 
         internal static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeNullable = new(
-            "Octopus_OptionalPropertiesOnMessageTypesMustBeNullable",
+            "OCT3008",
             "Optional Properties on MessageTypes must be nullable",
-            "Optional Properties on MessageTypes must be nullable.",
+            "Property \"{0}\" should be of type {1}? (Optional Properties on MessageTypes must be nullable)",
             Category,
             DiagnosticSeverity.Error,
             true,
@@ -96,7 +97,7 @@ We would expect [Optional] properties to be null if they have not been provided 
 This convention enforces that all optional properties must be nullable, so that consumers of the type are aware that they need to handle it appropriately.");
 
         internal static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
-            "Octopus_MessageTypesMustInstantiateCollections",
+            "OCT3009",
             "MessageTypes must instantiate non-nullable collections",
             "MessageTypes must instantiate non-nullable collections.",
             Category,
@@ -107,7 +108,7 @@ so that they are safe to consume as soon as contracts come off the wire. This pr
 initialized by the constructor.");
 
         internal static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
-            "Octopus_PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute",
+            "OCT3010",
             "Properties on Message Types must be either [Optional] or [Required]",
             "Properties on Message Types must be either [Optional] or [Required]",
             Category,
@@ -118,7 +119,7 @@ By requiring validation attributes on all of our message contracts, we can be co
 If a parameter is genuinely optional, use the [Optional] attribute.");
 
         internal static readonly DiagnosticDescriptor SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId = new(
-            "Octopus_SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId",
+            "OCT3011",
             "Properties on Message Types named SpaceId must be of type SpaceId",
             "Properties on Message Types named SpaceId must be of type SpaceId",
             Category,
@@ -127,7 +128,7 @@ If a parameter is genuinely optional, use the [Optional] attribute.");
             @"All properties named SpaceId must be of type SpaceId so that the model binder can set them");
 
         internal static readonly DiagnosticDescriptor IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType = new(
-            "Octopus_IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType",
+            "OCT3012",
             "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
             "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
             Category,
@@ -138,7 +139,7 @@ We want to avoid stringly typed Ids as they can be mixed up. This convention enc
 If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Area/Document/EntityName].MessageContracts");
         
         internal static readonly DiagnosticDescriptor MessageTypesMustHaveXmlDocComments = new(
-            "Octopus_MessageTypesMustHaveXmlDocComments",
+            "OCT3013",
             "Message Types must have XMLDoc Comments",
             "Message Types must have XMLDoc Comments",
             Category,
@@ -148,7 +149,7 @@ If a particular TinyType does not yet exist, add it to Octopus.Core.Features.[Ar
  and external developers to code against the api.");
         
         internal static readonly DiagnosticDescriptor ApiContractTypesMustLiveInTheAppropriateNamespace = new(
-            "Octopus_ApiContractTypesMustLiveInTheAppropriateNamespace",
+            "OCT3014",
             "Contracts must live in either the Octopus.Server.MessageContracts project or (temporarily) under some namespace containing MessageContracts.",
             "Contracts must live in either the Octopus.Server.MessageContracts project or (temporarily) under some namespace containing MessageContracts.",
             Category,
@@ -373,7 +374,9 @@ project back into this Git repository and C# solution.
             var hasSetter = propDec.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) ?? false;
             if (!hasSetter)
             {
-                context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustBeMutable, propDec.Identifier.GetLocation()));
+                context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustBeMutable, 
+                    location: propDec.Identifier.GetLocation(),
+                    propDec.Identifier.Text));
                 return false;
             }
 
@@ -382,9 +385,12 @@ project back into this Git repository and C# solution.
 
         static bool RequiredPropertiesOnMessageTypes_MustNotBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required)
         {
-            if (required == RequiredState.Required && propDec.Type is NullableTypeSyntax)
+            if (required == RequiredState.Required && propDec.Type is NullableTypeSyntax nts)
             {
-                context.ReportDiagnostic(Diagnostic.Create(RequiredPropertiesOnMessageTypesMustNotBeNullable, propDec.Identifier.GetLocation()));
+                var typeInfo = context.SemanticModel.GetTypeInfo(nts.ElementType);
+                context.ReportDiagnostic(Diagnostic.Create(RequiredPropertiesOnMessageTypesMustNotBeNullable, 
+                    location: propDec.Identifier.GetLocation(),
+                    propDec.Identifier.Text, CSharpNameForType(typeInfo.Type)));
                 return false;
             }
 
@@ -401,7 +407,9 @@ project back into this Git repository and C# solution.
                 if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.Boolean)) return true;
                 
                 // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
-                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable, propDec.Identifier.GetLocation()));
+                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable, 
+                    location: propDec.Identifier.GetLocation(), 
+                    propDec.Identifier.Text, CSharpNameForType(typeInfo.Type)));
                 return false;
             }
 
@@ -578,8 +586,9 @@ project back into this Git repository and C# solution.
                 if (responseTypeStr != expectedName)
                 {
                     // Future: we should be able to publish a fix-it given we know what the name is supposed to be.
-                    var diagnostic = Diagnostic.Create(diagnosticToRaise, typeDec.Identifier.GetLocation());
-                    context.ReportDiagnostic(diagnostic);
+                    context.ReportDiagnostic(Diagnostic.Create(diagnosticToRaise, 
+                        location: typeDec.Identifier.GetLocation(),
+                        expectedName, responseTypeStr));
                     return false;
                 }
             }
@@ -592,6 +601,25 @@ project back into this Git repository and C# solution.
         {
             var pos = str.LastIndexOf(oldValue, StringComparison.Ordinal);
             return pos != -1 ? str.Remove(pos, oldValue.Length).Insert(pos, newValue) : str;
+        }
+        
+        // Roslyn deals in MSIL types rather than C# types, so we get Int32 rather than int.
+        // this converts back to language-specific aliases.
+        static string CSharpNameForType(ITypeSymbol? symbol)
+        {
+            var symName = symbol?.Name;
+            // there is probably some builtin method to do this reverse lookup; replace this switch if you find out how
+            return symName switch
+            {
+                // add more here if we've missed any.
+                "Float" => "float",
+                "Double" => "double",
+                "String" => "string",
+                "Int32" => "int",
+                "Int64" => "long",
+                null => "null",
+                _ => symName,
+            };
         }
     }
 }
