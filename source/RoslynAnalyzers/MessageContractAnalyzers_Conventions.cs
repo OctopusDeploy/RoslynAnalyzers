@@ -58,7 +58,7 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType)
+        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType, SpecialTypeDeclarations cachedTypes)
         {
             if (required == RequiredState.Optional && !isCollectionType && propDec.Type is not NullableTypeSyntax)
             {
@@ -114,7 +114,7 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        static bool IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, SpecialTypeDeclarations cachedTypes)
         {
             // only applies to properties ending in Id, except SpaceId (handled below); also bail if we can't find the declaration of the CaseInsensitiveStringTinyType type
             if (!propDec.Identifier.Text.EndsWith("Id") || propDec.Identifier.Text == "SpaceId" || cachedTypes.CaseInsensitiveStringTinyType == null) return true;
@@ -133,7 +133,7 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, SpecialTypeDeclarations cachedTypes)
         {
             // only applies to properties literally called SpaceId; also bail if we can't find the declaration of the SpaceId type
             if (propDec.Identifier.Text != "SpaceId" || cachedTypes.SpaceId == null) return true;

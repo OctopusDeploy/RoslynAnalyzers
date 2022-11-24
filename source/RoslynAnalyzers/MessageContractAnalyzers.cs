@@ -6,6 +6,8 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System;
+using System.Diagnostics;
+using System.Threading;
 using static Octopus.RoslynAnalyzers.Descriptors;
 
 namespace Octopus.RoslynAnalyzers
@@ -38,29 +40,39 @@ namespace Octopus.RoslynAnalyzers
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterCompilationStartAction(CacheCommonTypes);
+            context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
 
+        SpecialTypeDeclarations? cachedTypeStorage; 
+
+#pragma warning disable RS1012 // context does not register any analyzer actions
+        // we're being a little bit tricky here. Normally you look up something in CompilationStart, then register actions
+        // which depend on that data. Those child actions then only run inside the compilation execution, which doesn't happen
+        // super often. This leads to errors only updating periodically in the IDE.
+        // We don't actually want to wait for compilation start; we just use it as a convenient way to cache some type lookups
+        // hence disabling this warning. If the cache isn't populated everything still works, just slightly less quickly.
+        void CacheCommonTypes(CompilationStartAnalysisContext context)
+        {
+            cachedTypeStorage = LookupCommonTypes(context.Compilation);
+        }
+#pragma warning restore RS1012
+
         // ReSharper disable once InconsistentNaming
-        record struct SpecialTypeDeclarations(
+        record SpecialTypeDeclarations(
             INamedTypeSymbol Boolean,
             INamedTypeSymbol String,
             INamedTypeSymbol IEnumerable,
             INamedTypeSymbol? SpaceId,
             INamedTypeSymbol? CaseInsensitiveStringTinyType);
 
-        static SpecialTypeDeclarations cachedTypes; // if you happened to use this before CacheCommonTypes it will blow up; beware
-
-        void CacheCommonTypes(CompilationStartAnalysisContext context)
-        {
-            cachedTypes = new SpecialTypeDeclarations(
-                Boolean: context.Compilation.GetSpecialType(SpecialType.System_Boolean),
-                String: context.Compilation.GetSpecialType(SpecialType.System_String),
-                IEnumerable: context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable),
-                SpaceId: context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId"),
-                CaseInsensitiveStringTinyType: context.Compilation.GetTypeByMetadataName("Octopus.TinyTypes.CaseInsensitiveStringTinyType"));
-
-            context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
-        }
+        // perf opt so we only lookup commonly used types by metadata once
+        SpecialTypeDeclarations LookupCommonTypes(Compilation compilation)
+             => cachedTypeStorage ?? new(
+                Boolean: compilation.GetSpecialType(SpecialType.System_Boolean),
+                String: compilation.GetSpecialType(SpecialType.System_String),
+                IEnumerable: compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable),
+                SpaceId: compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId"),
+                CaseInsensitiveStringTinyType: compilation.GetTypeByMetadataName("Octopus.TinyTypes.CaseInsensitiveStringTinyType"));
 
         static readonly Regex EventNameRegex = new("(?<!V\\d+)Event(V\\d+)?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         static readonly Regex RequestNameRegex = new("(?<!V\\d+)Request(V\\d+)*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -72,68 +84,57 @@ namespace Octopus.RoslynAnalyzers
         const string TypeNameIEvent = "IEvent";
         const string TypeNameResource = "Resource";
 
-        static void CheckNode(SyntaxNodeAnalysisContext context)
+        void CheckNode(SyntaxNodeAnalysisContext context)
         {
-            if (context.Node is TypeDeclarationSyntax typeDec)
+            if (context.Node is not TypeDeclarationSyntax typeDec) return; // we are only interested in class or struct declarations
+
+            // This analyzer inspects "API Surface" types; i.e. Commands, Requests, Responses, Events and Resources
+            // first we have to figure out which kind of type we've encountered (if any)
+            var apiSurfaceType = DetermineApiSurfaceType(typeDec);
+            if (apiSurfaceType == null) return;
+
+            // if we get here this is an "API Surface" type; either (request, command, response) or event or resource
+            // note technically everything else in the Octopus.Server.MessageContracts namespace is also an "API surface" type, 
+            // but verifying that would be more expensive and we don't need to do it yet
+            ApiContractTypes_MustLiveInTheAppropriateNamespace(context, typeDec);
+
+            if (apiSurfaceType is MessageType messageType)
             {
-                // This will match anything which has a basetype called ICommand<> whether it's our octopus one or not.
-                // In practice this should be fine, we don't have other ICommand<> or IRequest<> types running around our codebase and the namespace check is more work to do.
+                var cachedTypes = LookupCommonTypes(context.Compilation);
 
-                GenericNameSyntax? requestOrCommandDec = null;
-                IdentifierNameSyntax? responseEventOrResourceDec = null;
-                foreach (var baseTypeDec in typeDec.BaseList?.ChildNodes().OfType<SimpleBaseTypeSyntax>() ?? Enumerable.Empty<SimpleBaseTypeSyntax>())
+                // this is a "MessageType"; either request, command, or response
+                CheckMessageTypeProperties(context, typeDec, cachedTypes);
+                MessageTypes_MustHaveXmlDocComments(context, typeDec);
+
+                switch (messageType)
                 {
-                    foreach (var c in baseTypeDec.ChildNodes())
-                    {
-                        switch (c)
-                        {
-                            case GenericNameSyntax { Identifier.Text: TypeNameIRequest or TypeNameICommand } g:
-                                requestOrCommandDec = g;
-                                break;
-                            case IdentifierNameSyntax { Identifier.Text: TypeNameIResponse or TypeNameIEvent or TypeNameResource } i:
-                                responseEventOrResourceDec = i;
-                                break;
-                        }
-                    }
-                }
-
-                if (requestOrCommandDec != null || responseEventOrResourceDec != null)
-                {
-                    // this is an "API Surface" type; either (request, command, response) or event or resource
-                    // note technically everything else in the Octopus.Server.MessageContracts namespace is also an "API surface" type, 
-                    // but verifying that would be more expensive and we don't need to do it yet
-                    ApiContractTypes_MustLiveInTheAppropriateNamespace(context, typeDec);
-
-                    if (requestOrCommandDec != null || responseEventOrResourceDec?.Identifier.Text == TypeNameIResponse)
-                    {
-                        // this is a "MessageType"; either request, command, or response
-                        CheckProperties(context, typeDec);
-                        MessageTypes_MustHaveXmlDocComments(context, typeDec);
-                    }
-                }
-
-                // request/command/response specific
-                switch (requestOrCommandDec?.Identifier.Text)
-                {
-                    case TypeNameICommand:
+                    case MessageType.Command commandType:
                         if (CommandTypes_MustBeNamedCorrectly(context, typeDec))
-                            CommandTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, requestOrCommandDec); // the expected response name depends on the command name; so only run this check if the CommandName was good
-                        break;
+                        {
+                            // the expected response name depends on the command name; so only run this check if the CommandName was good
+                            CommandTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, commandType.NameSyntax);
+                        }
 
-                    case TypeNameIRequest:
+                        break;
+                    case MessageType.Request requestType:
                         if (RequestTypes_MustBeNamedCorrectly(context, typeDec))
-                            RequestTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, requestOrCommandDec); // the expected response name depends on the request name; so only run this check if the RequestName was good
+                        {
+                            // the expected response name depends on the request name; so only run this check if the RequestName was good
+                            RequestTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, requestType.NameSyntax);
+                        }
+
                         break;
                 }
-
-                if (responseEventOrResourceDec?.Identifier.Text == TypeNameIEvent)
-                {
-                    EventTypes_MustBeNamedCorrectly(context, typeDec);
-                }
+                // no specific checks for responses at this point
             }
+            else if (apiSurfaceType is ApiSurfaceType.Event)
+            {
+                EventTypes_MustBeNamedCorrectly(context, typeDec);
+            }
+            // no specific checks for resources at this point
         }
 
-        static bool CheckProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
+        static bool CheckMessageTypeProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, SpecialTypeDeclarations cachedTypes)
         {
             var result = true;
             foreach (var propDec in typeDec.DescendantNodes().OfType<PropertyDeclarationSyntax>())
@@ -142,23 +143,85 @@ namespace Octopus.RoslynAnalyzers
                 if (!propDec.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword))) continue;
 
                 // we have a number of places where we treat collection types differently; front-load that info
-                var isCollectionType = IsCollectionType(context, propDec);
+                var isCollectionType = IsCollectionType(context, propDec, cachedTypes);
                 var required = GetRequiredState(propDec);
 
                 // if anything returns false, propagate false outwards
                 result &= PropertiesOnMessageTypes_MustBeMutable(context, propDec);
                 result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec, required);
-                result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context, propDec, required, isCollectionType);
+                result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context,
+                    propDec,
+                    required,
+                    isCollectionType,
+                    cachedTypes);
                 result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
                 result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
-                result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
-                result &= IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(context, propDec);
+                result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec, cachedTypes);
+                result &= IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(context, propDec, cachedTypes);
             }
 
             return result;
         }
 
         // ----- helpers --------------- 
+
+        // Don't think of this as an OOP class hierarchy; think of it as an Enum with associated values.
+        //
+        // it bugs me that these aren't structs because our syntax parser is now incurring allocations.
+        // I could ObjectPool and make these things mutable but that seems like overkill. Sit on it for a while and think.
+        public abstract record ApiSurfaceType
+        {
+            public record Event(IdentifierNameSyntax NameSyntax) : ApiSurfaceType;
+
+            public record Resource(IdentifierNameSyntax NameSyntax) : ApiSurfaceType;
+        }
+
+        public abstract record MessageType : ApiSurfaceType
+        {
+            public record Command(GenericNameSyntax NameSyntax) : MessageType;
+
+            public record Request(GenericNameSyntax NameSyntax) : MessageType;
+
+            public record Response(IdentifierNameSyntax NameSyntax) : MessageType;
+        }
+
+        static ApiSurfaceType? DetermineApiSurfaceType(TypeDeclarationSyntax typeDeclaration)
+        {
+            var baseTypeList = typeDeclaration.BaseList?.ChildNodes().OfType<SimpleBaseTypeSyntax>().SelectMany(baseTypeDec => baseTypeDec.ChildNodes());
+            foreach (var baseTypeNode in baseTypeList ?? Enumerable.Empty<SyntaxNode>())
+            {
+                switch (baseTypeNode)
+                {
+                    // This will match anything which has a basetype called ICommand<> whether it's our octopus one or not.
+                    // In practice this should be fine, we don't have other ICommand<> or IRequest<> types running around our codebase and the full namespace check is more work.
+                    case GenericNameSyntax genericName:
+                        switch (genericName.Identifier.Text)
+                        {
+                            case TypeNameIRequest:
+                                return new MessageType.Request(genericName);
+                            case TypeNameICommand:
+                                return new MessageType.Command(genericName);
+                        }
+
+                        break;
+
+                    case IdentifierNameSyntax identifierName:
+                        switch (identifierName.Identifier.Text)
+                        {
+                            case TypeNameIResponse:
+                                return new MessageType.Response(identifierName);
+                            case TypeNameIEvent:
+                                return new ApiSurfaceType.Event(identifierName);
+                            case TypeNameResource:
+                                return new ApiSurfaceType.Resource(identifierName);
+                        }
+
+                        break;
+                }
+            }
+
+            return null;
+        }
 
         enum RequiredState
         {
@@ -183,7 +246,7 @@ namespace Octopus.RoslynAnalyzers
             return RequiredState.Unspecified;
         }
 
-        static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, SpecialTypeDeclarations cachedTypes)
         {
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
@@ -227,5 +290,13 @@ namespace Octopus.RoslynAnalyzers
                 _ => symName, // all other types get left alone
             };
         }
+    }
+}
+
+// Hack to let us use records targeting netstandard2.0
+namespace System.Runtime.CompilerServices
+{
+    internal static class IsExternalInit
+    {
     }
 }

@@ -494,7 +494,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class SomeEvent : IEvent { }
     public class SomeResource : Resource { }
 }
-// or these
+// should not flag on any of these
 namespace Octopus.Core.MessageContracts
 {
     /// <summary>a command</summary>
@@ -507,7 +507,7 @@ namespace Octopus.Core.MessageContracts
     public class SomeEvent : IEvent { }
     public class SomeResource : Resource { }
 }
-// or this last one (nested namespaces)
+// should not flag on this (same logical outcome as above, just testing our namespace treewalking)
 namespace Octopus {
   // a comment
   namespace Core.Features.OtherThings {
