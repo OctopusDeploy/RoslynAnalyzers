@@ -205,17 +205,26 @@ namespace Octopus.RoslynAnalyzers
         static string CSharpNameForType(ITypeSymbol? symbol)
         {
             var symName = symbol?.Name;
-            // there is probably some builtin method to do this reverse lookup; replace this switch if you find out how
             return symName switch
             {
-                // add more here if we've missed any.
-                "Float" => "float",
-                "Double" => "double",
-                "String" => "string",
-                "Int32" => "int",
-                "Int64" => "long",
+                nameof(Byte) => "byte",
+                nameof(SByte) => "sbyte",
+                nameof(Int16) => "short",
+                nameof(UInt16) => "ushort",
+                nameof(Int32) => "int",
+                nameof(UInt32) => "uint",
+                nameof(Int64) => "long",
+                nameof(UInt64) => "ulong",
+                nameof(Single) => "float",
+                nameof(Double) => "double",
+                nameof(Decimal) => "decimal",
+                nameof(Object) => "object",
+                nameof(Boolean) => "bool",
+                nameof(Char) => "char",
+                nameof(String) => "string",
+                // System.Void is a builtin type, but it cannot be used in C#
                 null => "null",
-                _ => symName,
+                _ => symName, // all other types get left alone
             };
         }
     }
