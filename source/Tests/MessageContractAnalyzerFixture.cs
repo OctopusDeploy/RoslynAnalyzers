@@ -506,7 +506,16 @@ namespace Octopus.Core.MessageContracts
     public class SomeResponse : IResponse { }
     public class SomeEvent : IEvent { }
     public class SomeResource : Resource { }
-}");
+}
+// or this last one (nested namespaces)
+namespace Octopus {
+  // a comment
+  namespace Core.Features.OtherThings {
+    // a comment again
+    namespace MessageContracts
+    {
+      public class SomeResource : Resource { }
+    }}}");
 
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(0),

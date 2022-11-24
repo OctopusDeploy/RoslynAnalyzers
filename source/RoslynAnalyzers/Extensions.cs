@@ -70,15 +70,13 @@ namespace Octopus.RoslynAnalyzers
             // We have a namespace. Use that as the type
             nameSpace = namespaceParent.Name.ToString();
 
-            // Keep moving "out" of the namespace declarations until we 
-            // run out of nested namespace declarations
-            while (true)
+            // Keep moving "out" of the namespace declarations until we run out of nested namespace declarations
+            var parent = namespaceParent.Parent as NamespaceDeclarationSyntax;
+            while(parent != null)
             {
-                if (namespaceParent.Parent is not NamespaceDeclarationSyntax parent) break;
-
                 // Add the outer namespace as a prefix to the final namespace
-                nameSpace = $"{namespaceParent.Name}.{nameSpace}";
-                namespaceParent = parent;
+                nameSpace = $"{parent.Name}.{nameSpace}";
+                parent = parent.Parent as NamespaceDeclarationSyntax;
             }
 
             // return the final namespace
