@@ -34,12 +34,10 @@ namespace Octopus.RoslynAnalyzers
             => ns.IsGlobalNamespace || ns.ContainingNamespace.IsGlobalNamespace
                 ? ns
                 : GetTopMostNamespace(ns.ContainingNamespace);
-
     }
-    
-    public static class SyntaxModelExtensions
-    {
 
+    public static class SyntaxExtensions
+    {
         /// <summary>
         /// Walks up the syntax tree until it reaches a namespace at the top. Returns emptystring if one cannot be found
         /// </summary>
@@ -55,7 +53,7 @@ namespace Octopus.RoslynAnalyzers
             // Get the containing syntax node for the type declaration
             // (could be a nested type, for example)
             var potentialNamespaceParent = syntax.Parent;
-    
+
             // Keep moving "out" of nested classes etc until we get to a namespace
             // or until we run out of parents
             while (potentialNamespaceParent != null &&
@@ -68,10 +66,10 @@ namespace Octopus.RoslynAnalyzers
             // Build up the final namespace by looping until we no longer have a namespace declaration
             if (potentialNamespaceParent is not BaseNamespaceDeclarationSyntax namespaceParent)
                 return nameSpace;
-            
+
             // We have a namespace. Use that as the type
             nameSpace = namespaceParent.Name.ToString();
-        
+
             // Keep moving "out" of the namespace declarations until we 
             // run out of nested namespace declarations
             while (true)
