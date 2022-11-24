@@ -130,7 +130,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.EventTypesMustBeNamedCorrectly).WithLocation(0));
+                new DiagnosticResult(Descriptors.EventTypesMustBeNamedCorrectly).WithLocation(0));
         }
 
         [Test]
@@ -146,7 +146,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithLocation(0));
+                new DiagnosticResult(Descriptors.RequestTypesMustBeNamedCorrectly).WithLocation(0));
         }
 
         [Test]
@@ -165,7 +165,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustBeNamedCorrectly).WithLocation(0));
+                new DiagnosticResult(Descriptors.RequestTypesMustBeNamedCorrectly).WithLocation(0));
         }
 
         [Test]
@@ -180,7 +180,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class SimpleResponse : IResponse { }
 }");
 
-            await Verify.VerifyAnalyzerAsync(source, new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustBeNamedCorrectly).WithLocation(0));
+            await Verify.VerifyAnalyzerAsync(source, new DiagnosticResult(Descriptors.CommandTypesMustBeNamedCorrectly).WithLocation(0));
         }
 
         [Test]
@@ -199,8 +199,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0).WithArguments("SimpleResponse", "SimpleResult"),
-                new DiagnosticResult(MessageContractAnalyzers.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(1).WithArguments("SimpleResponseV1", "SimpleResult"));
+                new DiagnosticResult(Descriptors.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0).WithArguments("SimpleResponse", "SimpleResult"),
+                new DiagnosticResult(Descriptors.RequestTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(1).WithArguments("SimpleResponseV1", "SimpleResult"));
         }
 
         [Test]
@@ -217,7 +217,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.CommandTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0).WithArguments("SimpleResponse", "SimpleResult"));
+                new DiagnosticResult(Descriptors.CommandTypesMustHaveCorrectlyNamedResponseTypes).WithLocation(0).WithArguments("SimpleResponse", "SimpleResult"));
         }
 
         [Test]
@@ -240,8 +240,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithLocation(0).WithArguments("GetOnlyProp"),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustBeMutable).WithLocation(1).WithArguments("ComputedProp"));
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBeMutable).WithLocation(0).WithArguments("GetOnlyProp"),
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBeMutable).WithLocation(1).WithArguments("ComputedProp"));
         }
 
         [Test]
@@ -270,9 +270,9 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(1).WithArguments("IntProperty", "int"),
-                new DiagnosticResult(MessageContractAnalyzers.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(2).WithArguments("ComparableProperty", "IComparable"));
+                new DiagnosticResult(Descriptors.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
+                new DiagnosticResult(Descriptors.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(1).WithArguments("IntProperty", "int"),
+                new DiagnosticResult(Descriptors.RequiredPropertiesOnMessageTypesMustNotBeNullable).WithLocation(2).WithArguments("ComparableProperty", "IComparable"));
         }
 
         [Test]
@@ -301,8 +301,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
-                new DiagnosticResult(MessageContractAnalyzers.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(1).WithArguments("IntProperty", "int"));
+                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
+                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(1).WithArguments("IntProperty", "int"));
         }
 
         [Test]
@@ -346,8 +346,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustInstantiateCollections).WithLocation(1));
+                new DiagnosticResult(Descriptors.MessageTypesMustInstantiateCollections).WithLocation(0),
+                new DiagnosticResult(Descriptors.MessageTypesMustInstantiateCollections).WithLocation(1));
         }
 
         [Test]
@@ -371,8 +371,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(1));
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(0),
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(1));
         }
 
         [Test]
@@ -396,7 +396,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId).WithLocation(0));
+                new DiagnosticResult(Descriptors.SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId).WithLocation(0));
         }
 
         [Test]
@@ -420,7 +420,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType).WithLocation(0));
+                new DiagnosticResult(Descriptors.IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType).WithLocation(0));
         }
 
         [Test]
@@ -442,9 +442,9 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithLocation(1),
-                new DiagnosticResult(MessageContractAnalyzers.MessageTypesMustHaveXmlDocComments).WithLocation(2));
+                new DiagnosticResult(Descriptors.MessageTypesMustHaveXmlDocComments).WithLocation(0),
+                new DiagnosticResult(Descriptors.MessageTypesMustHaveXmlDocComments).WithLocation(1),
+                new DiagnosticResult(Descriptors.MessageTypesMustHaveXmlDocComments).WithLocation(2));
         }
 
         // ApiContractTypes is broader than just IRequest, ICommand and IResponse,
@@ -509,16 +509,16 @@ namespace Octopus.Core.MessageContracts
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(0),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(1),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(2),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(3),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(4),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(10),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(11),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(12),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(13),
-                new DiagnosticResult(MessageContractAnalyzers.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(14));
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(0),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(1),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(2),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(3),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(4),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(10),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(11),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(12),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(13),
+                new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(14));
         }
 
         static string WithOctopusTypes(string source) => $"{Common.Usings}{source}{Common.MessageTypeDeclarations}";
