@@ -72,7 +72,7 @@ namespace Octopus.RoslynAnalyzers
 
             // Keep moving "out" of the namespace declarations until we run out of nested namespace declarations
             var parent = namespaceParent.Parent as NamespaceDeclarationSyntax;
-            while(parent != null)
+            while (parent != null)
             {
                 // Add the outer namespace as a prefix to the final namespace
                 nameSpace = $"{parent.Name}.{nameSpace}";

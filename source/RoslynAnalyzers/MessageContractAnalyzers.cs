@@ -103,7 +103,7 @@ namespace Octopus.RoslynAnalyzers
                     // note technically everything else in the Octopus.Server.MessageContracts namespace is also an "API surface" type, 
                     // but verifying that would be more expensive and we don't need to do it yet
                     ApiContractTypes_MustLiveInTheAppropriateNamespace(context, typeDec);
-                    
+
                     if (requestOrCommandDec != null || responseEventOrResourceDec?.Identifier.Text == TypeNameIResponse)
                     {
                         // this is a "MessageType"; either request, command, or response
@@ -111,7 +111,7 @@ namespace Octopus.RoslynAnalyzers
                         MessageTypes_MustHaveXmlDocComments(context, typeDec);
                     }
                 }
-                
+
                 // request/command/response specific
                 switch (requestOrCommandDec?.Identifier.Text)
                 {
@@ -132,7 +132,7 @@ namespace Octopus.RoslynAnalyzers
                 }
             }
         }
-        
+
         static bool CheckProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             var result = true;
@@ -157,9 +157,9 @@ namespace Octopus.RoslynAnalyzers
 
             return result;
         }
-        
+
         // ----- helpers --------------- 
-        
+
         enum RequiredState
         {
             Unspecified,
@@ -192,14 +192,14 @@ namespace Octopus.RoslynAnalyzers
 
             return typeInfo.Type.IsAssignableTo(cachedTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.String);
         }
-       
+
         // "Request" might be part of the name of the request DTO, so we only want to replace the last occurrence of the word "Request"
         static string ReplaceLast(string str, string oldValue, string newValue)
         {
             var pos = str.LastIndexOf(oldValue, StringComparison.Ordinal);
             return pos != -1 ? str.Remove(pos, oldValue.Length).Insert(pos, newValue) : str;
         }
-        
+
         // Roslyn deals in MSIL types rather than C# types, so we get Int32 rather than int.
         // this converts back to language-specific aliases.
         static string CSharpNameForType(ITypeSymbol? symbol)

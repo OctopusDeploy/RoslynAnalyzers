@@ -8,11 +8,10 @@ using static Octopus.RoslynAnalyzers.Descriptors;
 namespace Octopus.RoslynAnalyzers
 {
     // ReSharper disable UnusedMethodReturnValue.Local
-    
+
     // This part of the MessageContractAnalyzers contains all the specific methods which enforce each convention
     public partial class MessageContractAnalyzers
     {
-       
         static bool ApiContractTypes_MustLiveInTheAppropriateNamespace(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             var ns = typeDec.GetNamespace();
@@ -31,14 +30,14 @@ namespace Octopus.RoslynAnalyzers
             context.ReportDiagnostic(Diagnostic.Create(ApiContractTypesMustLiveInTheAppropriateNamespace, typeDec.Identifier.GetLocation()));
             return false;
         }
-        
+
         static bool PropertiesOnMessageTypes_MustBeMutable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
             var hasSetter = propDec.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) ?? false;
             if (hasSetter)
                 return true;
-            
-            context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustBeMutable, 
+
+            context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustBeMutable,
                 location: propDec.Identifier.GetLocation(),
                 propDec.Identifier.Text));
             return false;
@@ -49,9 +48,10 @@ namespace Octopus.RoslynAnalyzers
             if (required == RequiredState.Required && propDec.Type is NullableTypeSyntax nts)
             {
                 var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, nts.ElementType);
-                context.ReportDiagnostic(Diagnostic.Create(RequiredPropertiesOnMessageTypesMustNotBeNullable, 
+                context.ReportDiagnostic(Diagnostic.Create(RequiredPropertiesOnMessageTypesMustNotBeNullable,
                     location: propDec.Identifier.GetLocation(),
-                    propDec.Identifier.Text, CSharpNameForType(typeInfo.Type)));
+                    propDec.Identifier.Text,
+                    CSharpNameForType(typeInfo.Type)));
                 return false;
             }
 
@@ -66,11 +66,12 @@ namespace Octopus.RoslynAnalyzers
                 // TODO @orion.edwards revisit this later when we do explicit defaults properly instead
                 var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propDec.Type);
                 if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.Boolean)) return true;
-                
+
                 // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
-                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable, 
-                    location: propDec.Identifier.GetLocation(), 
-                    propDec.Identifier.Text, CSharpNameForType(typeInfo.Type)));
+                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable,
+                    location: propDec.Identifier.GetLocation(),
+                    propDec.Identifier.Text,
+                    CSharpNameForType(typeInfo.Type)));
                 return false;
             }
 
@@ -104,12 +105,12 @@ namespace Octopus.RoslynAnalyzers
         static bool MessageTypes_MustHaveXmlDocComments(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             var symbol = ModelExtensions.GetDeclaredSymbol(context.SemanticModel, typeDec, cancellationToken: context.CancellationToken);
-            if(string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
+            if (string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
             {
                 context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustHaveXmlDocComments, typeDec.Identifier.GetLocation()));
                 return false;
             }
-            
+
             return true;
         }
 
@@ -159,7 +160,7 @@ namespace Octopus.RoslynAnalyzers
             context.ReportDiagnostic(Diagnostic.Create(EventTypesMustBeNamedCorrectly, typeDec.Identifier.GetLocation()));
             return false;
         }
-        
+
         static bool CommandTypes_MustBeNamedCorrectly(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             if (CommandNameRegex.IsMatch(typeDec.Identifier.Text))
@@ -192,7 +193,7 @@ namespace Octopus.RoslynAnalyzers
                 requestOrCommandDec,
                 "Request",
                 RequestTypesMustHaveCorrectlyNamedResponseTypes);
-        
+
         // typeDec is the Request/Command concrete class declaration
         // genericDec is the <TRequest, TResponse> part of the IRequest/Command declaration
         static bool CheckResponseTypeName(SyntaxNodeAnalysisContext context,
@@ -211,9 +212,10 @@ namespace Octopus.RoslynAnalyzers
                 if (responseTypeStr != expectedName)
                 {
                     // Future: we should be able to publish a fix-it given we know what the name is supposed to be.
-                    context.ReportDiagnostic(Diagnostic.Create(diagnosticToRaise, 
+                    context.ReportDiagnostic(Diagnostic.Create(diagnosticToRaise,
                         location: typeDec.Identifier.GetLocation(),
-                        expectedName, responseTypeStr));
+                        expectedName,
+                        responseTypeStr));
                     return false;
                 }
             }
