@@ -1,45 +1,12 @@
-using System;
-using Microsoft.CodeAnalysis;
+﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Octopus.RoslynAnalyzers
 {
-    public static class SemanticModelExtensions
-    {
-        public static bool IsNonGenericType(this INamedTypeSymbol type, string name, params string[] namespaceParts)
-            => !type.IsGenericType &&
-                type.Name == name &&
-                type.IsInNamespace(namespaceParts);
-
-        public static bool IsGenericType(this INamedTypeSymbol type, string name, int numberOfGenericParameters, params string[] namespaceParts)
-            => type.IsGenericType &&
-                type.TypeArguments.Length == numberOfGenericParameters &&
-                type.Name == name &&
-                type.IsInNamespace(namespaceParts);
-
-        static bool IsInNamespace(this ITypeSymbol type, params string[] namespaceParts)
-        {
-            var ns = type.ContainingNamespace;
-            for (var x = namespaceParts.Length - 1; x >= 0; x--)
-            {
-                if (ns?.Name != namespaceParts[x])
-                    return false;
-                ns = ns.ContainingNamespace;
-            }
-
-            return ns.IsGlobalNamespace;
-        }
-
-        public static INamespaceSymbol GetTopMostNamespace(this INamespaceSymbol ns)
-            => ns.IsGlobalNamespace || ns.ContainingNamespace.IsGlobalNamespace
-                ? ns
-                : GetTopMostNamespace(ns.ContainingNamespace);
-    }
-
-    public static class SyntaxExtensions
+    public static class SyntaxModelExtensionMethods
     {
         /// <summary>
-        /// Walks up the syntax tree until it reaches a namespace at the top. Returns emptystring if one cannot be found
+        /// Walks up the syntax tree until it reaches a namespace at the top. Returns empty string if one cannot be found
         /// </summary>
         /// <remarks>
         /// Adapted from https://andrewlock.net/creating-a-source-generator-part-5-finding-a-type-declarations-namespace-and-type-hierarchy/
