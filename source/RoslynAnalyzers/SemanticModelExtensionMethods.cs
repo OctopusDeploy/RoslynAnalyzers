@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Octopus.RoslynAnalyzers
 {
-    public static class Extensions
+    public static class SemanticModelExtensionMethods
     {
         public static bool IsNonGenericType(this INamedTypeSymbol type, string name, params string[] namespaceParts)
             => !type.IsGenericType &&

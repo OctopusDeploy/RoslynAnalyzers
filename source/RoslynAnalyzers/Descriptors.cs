@@ -67,14 +67,14 @@ namespace Octopus.RoslynAnalyzers
             @"Integration test container classes should only contain integration test classes and methods or immutable data.
 Any other complex logic or state should be in builders, class/assembly fixtures, or some other generic helper."
         );
-        
+
         public static DiagnosticDescriptor Oct2007IntegrationTestContainersMethodsMustBePrivate => GetTestAnalyzerDescriptor(
             "OCT2007",
             "Methods in integration test container classes should be private",
             "Integration test container classes should only be used to organise tests (because we must have 1 test per class for maximum parallel goodness,"
             + " any logic that you want to share across multiple tests should be in builders, class/assembly fixtures, or some other generic helper."
         );
-        
+
         public static DiagnosticDescriptor Oct2008IntegrationTestForwardCancellationTokenToInvocations()
         {
             return new DiagnosticDescriptor("OCT2008",
@@ -86,5 +86,121 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
                 "Forward the CancellationToken property to compatible methods to ensure cancellation notifications get properly propagated,"
                 + "or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token.");
         }
+        
+        // ----- Message Contract Analyzers -----
+        
+        const string Category = "Octopus";
+
+        public static readonly DiagnosticDescriptor EventTypesMustBeNamedCorrectly = new(
+            "OCT3001",
+            "Event types must either end with Event or EventV[versionNumber]",
+            "Event types must either end with Event or EventV[versionNumber]",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+        
+        public static readonly DiagnosticDescriptor CommandTypesMustBeNamedCorrectly = new(
+            "OCT3002",
+            "Command types must either end with Command or CommandV[versionNumber]",
+            "Command types must either end with Command or CommandV[versionNumber]",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor RequestTypesMustBeNamedCorrectly = new(
+            "OCT3003",
+            "Request types must either end with Request or RequestV[versionNumber]",
+            "Request types must either end with Request or RequestV[versionNumber]",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor CommandTypesMustHaveCorrectlyNamedResponseTypes = new(
+            "OCT3004",
+            "Types that implement ICommand must have responses with matching names",
+            "Response type should be \"{0}\" instead of \"{1}\" (Types that implement ICommand must have responses with matching names)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor RequestTypesMustHaveCorrectlyNamedResponseTypes = new(
+            "OCT3005",
+            "Types that implement IRequest must have responses with matching names",
+            "Response type should be \"{0}\" instead of \"{1}\" (Types that implement IRequest must have responses with matching names)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustBeMutable = new(
+            "OCT3006",
+            "Properties on MessageTypes must be Mutable.",
+            "Property \"{0}\" should have a setter (Properties on MessageTypes must be Mutable)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor RequiredPropertiesOnMessageTypesMustNotBeNullable = new(
+            "OCT3007",
+            "Required Properties on MessageTypes must not be nullable",
+            "Property \"{0}\" should be of type {1} (Required Properties on MessageTypes must not be nullable)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeNullable = new(
+            "OCT3008",
+            "Optional Properties on MessageTypes must be nullable",
+            "Property \"{0}\" should be of type {1}? (Optional Properties on MessageTypes must be nullable)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
+            "OCT3009",
+            "MessageTypes must instantiate non-nullable collections",
+            "MessageTypes must instantiate non-nullable collections.",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
+            "OCT3010",
+            "Properties on Message Types must be either [Optional] or [Required]",
+            "Properties on Message Types must be either [Optional] or [Required]",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId = new(
+            "OCT3011",
+            "Properties on Message Types named SpaceId must be of type SpaceId",
+            "Properties on Message Types named SpaceId must be of type SpaceId",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        public static readonly DiagnosticDescriptor IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType = new(
+            "OCT3012",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+        
+        public static readonly DiagnosticDescriptor MessageTypesMustHaveXmlDocComments = new(
+            "OCT3013",
+            "Message Types must have XMLDoc Comments",
+            "Message Types must have XMLDoc Comments",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+        
+        public static readonly DiagnosticDescriptor ApiContractTypesMustLiveInTheAppropriateNamespace = new(
+            "OCT3014",
+            "Contracts must live in either the Octopus.Server.MessageContracts project or (temporarily) under some namespace containing MessageContracts.",
+            "Contracts must live in either the Octopus.Server.MessageContracts project or (temporarily) under some namespace containing MessageContracts.",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
     }
 }
