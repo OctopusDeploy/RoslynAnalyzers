@@ -439,7 +439,18 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class CommentedRequest: IRequest<CommentedRequest, CommentedResponse> { }
     /// <summary>a response</summary>
     public class CommentedResponse : IResponse { }
+
+    [Experimental]
+    public class ExperimentalCommand: ICommand<ExperimentalCommand, ExperimentalResponse> { }
+
+    [Experimental]
+    public class ExperimentalRequest: IRequest<ExperimentalRequest, ExperimentalResponse> { }
+
+    [Experimental]
+    public class ExperimentalResponse : IResponse { }
 }");
+            
+            // types marked experimental should not trigger a warning
 
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(Descriptors.MessageTypesMustHaveXmlDocComments).WithLocation(0),
@@ -552,6 +563,7 @@ namespace Octopus.Server.MessageContracts
     namespace Attributes
     {
       public sealed class OptionalAttribute : ValidationAttribute { } // not quite verbatim for this but it doesn't matter
+      public sealed class ExperimentalAttribute : Attribute { } // not quite verbatim for this but it doesn't matter
     }
   }
 }
