@@ -104,6 +104,11 @@ namespace Octopus.RoslynAnalyzers
 
         static bool MessageTypes_MustHaveXmlDocComments(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
+            // Filter out types that have [Experimental] attribute, those don't need XMLDocs.
+            // The syntax model is faster than the semantic model so we check this first 
+            var attrNames = typeDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
+            if (attrNames.Any(a => a == "Experimental")) return true;
+            
             var symbol = ModelExtensions.GetDeclaredSymbol(context.SemanticModel, typeDec, cancellationToken: context.CancellationToken);
             if (string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
             {
