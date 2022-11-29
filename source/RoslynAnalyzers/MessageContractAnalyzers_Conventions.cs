@@ -58,14 +58,15 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType, SpecialTypeDeclarations cachedTypes)
+        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType)
         {
             if (required == RequiredState.Optional && !isCollectionType && propDec.Type is not NullableTypeSyntax)
             {
                 // special-case: non-nullable bool is allowed to have implicit default of false without specifying anything.
                 // TODO @orion.edwards revisit this later when we do explicit defaults properly instead
                 var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propDec.Type);
-                if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.Boolean)) return true;
+                var booleanType = context.Compilation.GetSpecialType(SpecialType.System_Boolean);
+                if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, booleanType)) return true;
 
                 // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
                 context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable,
@@ -119,17 +120,19 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, SpecialTypeDeclarations cachedTypes)
+        static bool IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
+            var caseInsensitiveStringTinyType = context.Compilation.GetTypeByMetadataName("Octopus.TinyTypes.CaseInsensitiveStringTinyType");
+            
             // only applies to properties ending in Id, except SpaceId (handled below); also bail if we can't find the declaration of the CaseInsensitiveStringTinyType type
-            if (!propDec.Identifier.Text.EndsWith("Id") || propDec.Identifier.Text == "SpaceId" || cachedTypes.CaseInsensitiveStringTinyType == null) return true;
+            if (!propDec.Identifier.Text.EndsWith("Id") || propDec.Identifier.Text == "SpaceId" || caseInsensitiveStringTinyType == null) return true;
 
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
             var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propType);
             if (typeInfo.Type == null) return false;
 
-            if (!typeInfo.Type.IsAssignableTo(cachedTypes.CaseInsensitiveStringTinyType))
+            if (!typeInfo.Type.IsAssignableTo(caseInsensitiveStringTinyType))
             {
                 context.ReportDiagnostic(Diagnostic.Create(IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType, propDec.Identifier.GetLocation()));
                 return false;
@@ -138,17 +141,19 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, SpecialTypeDeclarations cachedTypes)
+        static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
+            var spaceIdType = context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId");
+            
             // only applies to properties literally called SpaceId; also bail if we can't find the declaration of the SpaceId type
-            if (propDec.Identifier.Text != "SpaceId" || cachedTypes.SpaceId == null) return true;
+            if (propDec.Identifier.Text != "SpaceId" || spaceIdType == null) return true;
 
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
             var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propType);
             if (typeInfo.Type == null) return false;
 
-            if (!SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.SpaceId))
+            if (!SymbolEqualityComparer.Default.Equals(typeInfo.Type, spaceIdType))
             {
                 context.ReportDiagnostic(Diagnostic.Create(SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId, propDec.Identifier.GetLocation()));
                 return false;
