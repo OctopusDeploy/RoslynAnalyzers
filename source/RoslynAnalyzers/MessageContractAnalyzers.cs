@@ -39,40 +39,8 @@ namespace Octopus.RoslynAnalyzers
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            context.RegisterCompilationStartAction(CacheCommonTypes);
             context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
-
-        SpecialTypeDeclarations? cachedTypeStorage; 
-
-#pragma warning disable RS1012 // context does not register any analyzer actions
-        // we're being a little bit tricky here. Normally you look up something in CompilationStart, then register actions
-        // which depend on that data. Those child actions then only run inside the compilation execution, which doesn't happen
-        // super often. This leads to errors only updating periodically in the IDE.
-        // We don't actually want to wait for compilation start; we just use it as a convenient way to cache some type lookups
-        // hence disabling this warning. If the cache isn't populated everything still works, just slightly less quickly.
-        void CacheCommonTypes(CompilationStartAnalysisContext context)
-        {
-            cachedTypeStorage = LookupCommonTypes(context.Compilation);
-        }
-#pragma warning restore RS1012
-
-        // ReSharper disable once InconsistentNaming
-        record SpecialTypeDeclarations(
-            INamedTypeSymbol Boolean,
-            INamedTypeSymbol String,
-            INamedTypeSymbol IEnumerable,
-            INamedTypeSymbol? SpaceId,
-            INamedTypeSymbol? CaseInsensitiveStringTinyType);
-
-        // perf opt so we only lookup commonly used types by metadata once
-        SpecialTypeDeclarations LookupCommonTypes(Compilation compilation)
-             => cachedTypeStorage ?? new(
-                Boolean: compilation.GetSpecialType(SpecialType.System_Boolean),
-                String: compilation.GetSpecialType(SpecialType.System_String),
-                IEnumerable: compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable),
-                SpaceId: compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId"),
-                CaseInsensitiveStringTinyType: compilation.GetTypeByMetadataName("Octopus.TinyTypes.CaseInsensitiveStringTinyType"));
 
         static readonly Regex EventNameRegex = new("(?<!V\\d+)Event(V\\d+)?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
         static readonly Regex RequestNameRegex = new("(?<!V\\d+)Request(V\\d+)*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -100,10 +68,8 @@ namespace Octopus.RoslynAnalyzers
 
             if (apiSurfaceType is MessageType messageType)
             {
-                var cachedTypes = LookupCommonTypes(context.Compilation);
-
                 // this is a "MessageType"; either request, command, or response
-                CheckMessageTypeProperties(context, typeDec, cachedTypes);
+                CheckMessageTypeProperties(context, typeDec);
                 MessageTypes_MustHaveXmlDocComments(context, typeDec);
 
                 switch (messageType)
@@ -134,7 +100,7 @@ namespace Octopus.RoslynAnalyzers
             // no specific checks for resources at this point
         }
 
-        static bool CheckMessageTypeProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, SpecialTypeDeclarations cachedTypes)
+        static bool CheckMessageTypeProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
         {
             var result = true;
             foreach (var propDec in typeDec.DescendantNodes().OfType<PropertyDeclarationSyntax>())
@@ -143,7 +109,7 @@ namespace Octopus.RoslynAnalyzers
                 if (!propDec.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword))) continue;
 
                 // we have a number of places where we treat collection types differently; front-load that info
-                var isCollectionType = IsCollectionType(context, propDec, cachedTypes);
+                var isCollectionType = IsCollectionType(context, propDec);
                 var required = GetRequiredState(propDec);
 
                 // if anything returns false, propagate false outwards
@@ -152,12 +118,11 @@ namespace Octopus.RoslynAnalyzers
                 result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context,
                     propDec,
                     required,
-                    isCollectionType,
-                    cachedTypes);
+                    isCollectionType);
                 result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
                 result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
-                result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec, cachedTypes);
-                result &= IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(context, propDec, cachedTypes);
+                result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
+                result &= IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(context, propDec);
             }
 
             return result;
@@ -246,14 +211,16 @@ namespace Octopus.RoslynAnalyzers
             return RequiredState.Unspecified;
         }
 
-        static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, SpecialTypeDeclarations cachedTypes)
+        static bool IsCollectionType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
             var typeInfo = context.SemanticModel.GetTypeInfo(propType);
             if (typeInfo.Type == null) return false;
 
-            return typeInfo.Type.IsAssignableTo(cachedTypes.IEnumerable) && !SymbolEqualityComparer.Default.Equals(typeInfo.Type, cachedTypes.String);
+            var enumerableType = context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
+            var stringType = context.Compilation.GetSpecialType(SpecialType.System_String);
+            return typeInfo.Type.IsAssignableTo(enumerableType) && !SymbolEqualityComparer.Default.Equals(typeInfo.Type, stringType);
         }
 
         // "Request" might be part of the name of the request DTO, so we only want to replace the last occurrence of the word "Request"
