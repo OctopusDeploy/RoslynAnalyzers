@@ -335,7 +335,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         public int InitializedIntProperty { get; set; } = 10; // OK
 
         [Optional]
-        public int InitializedIntPropertyEmpty { get; set; } = 0; // OK
+        public int InitializedIntPropertyDefault { get; set; } = 0; // OK
 
         [Optional]
         public bool {|#2:BoolProperty|} { get; set; } // NOT OK, must be nullable or initialized
@@ -347,7 +347,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         public bool InitializedBoolProperty { get; set; } = true; // OK
 
         [Optional]
-        public bool InitializedBoolPropertyEmpty { get; set; } = false; // OK
+        public bool InitializedBoolPropertyDefault { get; set; } = false; // OK
 
         [Optional]
         public string[] {|#3:CollectionProperty|} { get; set; } // NOT OK, must be nullable or initialized
