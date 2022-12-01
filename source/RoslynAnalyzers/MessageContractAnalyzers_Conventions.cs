@@ -59,34 +59,17 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType)
+        static bool OptionalPropertiesOnMessageTypes_MustBeInitializedOrNullable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required)
         {
-            if (required == RequiredState.Optional && !isCollectionType && propDec.Type is not NullableTypeSyntax)
+            if (required == RequiredState.Optional && propDec.Type is not NullableTypeSyntax && propDec.Initializer == null)
             {
-                // special-case: non-nullable bool is allowed to have implicit default of false without specifying anything.
-                // TODO @orion.edwards revisit this later when we do explicit defaults properly instead
                 var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propDec.Type);
-                var booleanType = context.Compilation.GetSpecialType(SpecialType.System_Boolean);
-                if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, booleanType)) return true;
 
                 // non-nullable optional property that isn't a collection (strings are enumerable but not collections)
-                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeNullable,
+                context.ReportDiagnostic(Diagnostic.Create(OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable,
                     location: propDec.Identifier.GetLocation(),
                     propDec.Identifier.Text,
                     CSharpNameForType(typeInfo.Type)));
-                return false;
-            }
-
-            return true;
-        }
-
-        static bool MessageTypes_MustInstantiateCollections(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, RequiredState required, bool isCollectionType)
-        {
-            if (!isCollectionType || required != RequiredState.Optional || propDec.Type is NullableTypeSyntax) return true; // only applies to non-nullable optional collections
-
-            if (propDec.Initializer == null)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustInstantiateCollections, propDec.Identifier.GetLocation()));
                 return false;
             }
 

@@ -147,21 +147,15 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
 
-        public static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeNullable = new(
+        public static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable = new(
             "OCT3008",
-            "Optional Properties on MessageTypes must be nullable",
-            "Property \"{0}\" should be of type {1}? (Optional Properties on MessageTypes must be nullable)",
+            "Optional Properties on MessageTypes must be nullable or have initializers",
+            "Property \"{0}\" should have initializer or be of type {1}? (Optional Properties on MessageTypes must be initialized or nullable)",
             Category,
             DiagnosticSeverity.Error,
             true);
 
-        public static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
-            "OCT3009",
-            "MessageTypes must instantiate non-nullable collections",
-            "MessageTypes must instantiate non-nullable collections.",
-            Category,
-            DiagnosticSeverity.Error,
-            true);
+        // OCT3009 was "MessageTypes must instantiate non-nullable collections", but this is now subsumed by our "null or initialized" convention. The ID is free for something else to use
 
         public static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
             "OCT3010",

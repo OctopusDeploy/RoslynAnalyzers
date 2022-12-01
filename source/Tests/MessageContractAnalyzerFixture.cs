@@ -276,7 +276,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Test]
-        public async Task OptionalPropertiesOnMessageTypesMustBeNullable() // except collection types
+        public async Task OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable()
         {
             var source = WithOctopusTypes(@"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
@@ -284,70 +284,90 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
-        [Optional]
-        public string {|#0:StringProperty|} { get; set; }
-
-        [Optional]
-        public int {|#1:IntProperty|} { get; set; }
-
-        [Optional]
-        public string[] StringListProperty { get; set; } = null; // should NOT fire on this because optional nonnull collections are allowed
-
-        [Optional]
-        public bool BoolProperty { get; set; } // should NOT fire on this because we have a special case for bool
-    }
-    /// <summary>response</summary>
-    public class SimpleResponse : IResponse { }
-}");
-
-            await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(0).WithArguments("StringProperty", "string"),
-                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeNullable).WithLocation(1).WithArguments("IntProperty", "int"));
+        public SimpleRequest(string requiredString, int requiredInt, bool requiredBool, string[] requiredCollection)
+        {
+            RequiredStringProperty = requiredString;
+            RequiredIntProperty = requiredInt;
+            RequiredBoolProperty = requiredBool;
+            RequiredCollectionProperty = requiredCollection;
         }
 
-        [Test]
-        public async Task MessageTypesMustInstantiateCollections()
-        {
-            var source = WithOctopusTypes(@"
-namespace Octopus.Core.Features.ServerTasks.MessageContracts
-{
-    /// <summary>request</summary>
-    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
-    {
-        protected SimpleRequest() { }
-        public SimpleRequest(List<string> requiredStringList)
-        {
-            RequiredStringListProperty = requiredStringList;
-        }
+        // --- sanity check required properties aren't affected -----
 
         [Required]
-        public List<string> RequiredStringListProperty { get; set; } // should not fire on this; collection required so another check will ensure it's assigned in the constructor
+        public string RequiredStringProperty { get; set; }
+
+        [Required]
+        public int RequiredIntProperty { get; set; }
+
+        [Required]
+        public bool RequiredBoolProperty { get; set; }
+
+        [Required]
+        public string[] RequiredCollectionProperty { get; set; }
+
+        // --- important stuff starts here -----
 
         [Optional]
-        public List<string> {|#0:StringListProperty|} { get; set; } // should fire on this; collection is nonnullable
+        public string {|#0:StringProperty|} { get; set; } // NOT OK, must be nullable or initialized
 
         [Optional]
-        public string[] {|#1:StringArrayProperty|} { get; set; } // should fire on this; collection is nonnullable
+        public string? NullableStringProperty { get; set; } // OK
 
         [Optional]
-        public List<string>? NullableStringListProperty { get; set; } // should not fire on this; collection is nullable
+        public string InitializedStringProperty { get; set; } =  ""foobar""; // OK
 
         [Optional]
-        public string[]? NullableStringArrayProperty { get; set; } // should not fire on this; collection is nullable
+        public string InitializedStringPropertyEmpty { get; set; } = string.Empty; // OK
 
         [Optional]
-        public List<string> StringListPropertyInstantiated { get; set; } = new(); // should not fire on this; collection is instantiated
+        public string InitializedStringPropertyExplicitNull { get; set; } = null!; // OK; If you really want to break things, then you can.
 
         [Optional]
-        public string[] StringArrayPropertyInstantiated { get; set; } = Array.Empty<string>(); // should not fire on this; collection is instantiated
+        public int {|#1:IntProperty|} { get; set; } // NOT OK, must be nullable or initialized
+
+        [Optional]
+        public int? NullableIntProperty { get; set; } // OK
+
+        [Optional]
+        public int InitializedIntProperty { get; set; } = 10; // OK
+
+        [Optional]
+        public int InitializedIntPropertyEmpty { get; set; } = 0; // OK
+
+        [Optional]
+        public bool {|#2:BoolProperty|} { get; set; } // NOT OK, must be nullable or initialized
+
+        [Optional]
+        public bool? NullableBoolProperty { get; set; } // OK
+
+        [Optional]
+        public bool InitializedBoolProperty { get; set; } = true; // OK
+
+        [Optional]
+        public bool InitializedBoolPropertyEmpty { get; set; } = false; // OK
+
+        [Optional]
+        public string[] {|#3:CollectionProperty|} { get; set; } // NOT OK, must be nullable or initialized
+
+        [Optional]
+        public string[]? NullableCollectionProperty { get; set; } // OK
+
+        [Optional]
+        public string[] InitializedCollectionProperty { get; set; } = new string[0]; // OK
+
+        [Optional]
+        public string[] InitializedCollectionPropertyEmpty { get; set; } = Array.Empty<string>(); // OK
     }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(Descriptors.MessageTypesMustInstantiateCollections).WithLocation(0),
-                new DiagnosticResult(Descriptors.MessageTypesMustInstantiateCollections).WithLocation(1));
+                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable).WithLocation(0).WithArguments("StringProperty", "string"),
+                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable).WithLocation(1).WithArguments("IntProperty", "int"),
+                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable).WithLocation(2).WithArguments("BoolProperty", "bool"),
+                new DiagnosticResult(Descriptors.OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable).WithLocation(3).WithArguments("CollectionProperty", "string[]"));
         }
 
         [Test]
@@ -425,7 +445,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     [Experimental]
     public class ExperimentalResponse : IResponse { }
 }");
-            
+
             // types marked experimental should not trigger a warning
 
             await Verify.VerifyAnalyzerAsync(source,

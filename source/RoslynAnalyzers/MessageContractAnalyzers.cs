@@ -27,8 +27,7 @@ namespace Octopus.RoslynAnalyzers
             RequestTypesMustHaveCorrectlyNamedResponseTypes,
             PropertiesOnMessageTypesMustBeMutable,
             RequiredPropertiesOnMessageTypesMustNotBeNullable,
-            OptionalPropertiesOnMessageTypesMustBeNullable,
-            MessageTypesMustInstantiateCollections,
+            OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable,
             PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
             SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId,
             MessageTypesMustHaveXmlDocComments,
@@ -107,18 +106,12 @@ namespace Octopus.RoslynAnalyzers
                 // only validate public properties
                 if (!propDec.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword))) continue;
 
-                // we have a number of places where we treat collection types differently; front-load that info
-                var isCollectionType = IsCollectionType(context, propDec);
                 var required = GetRequiredState(propDec);
 
                 // if anything returns false, propagate false outwards
                 result &= PropertiesOnMessageTypes_MustBeMutable(context, propDec);
                 result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec, required);
-                result &= OptionalPropertiesOnMessageTypes_ExceptForCollections_MustBeNullable(context,
-                    propDec,
-                    required,
-                    isCollectionType);
-                result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
+                result &= OptionalPropertiesOnMessageTypes_MustBeInitializedOrNullable(context, propDec, required);
                 result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
                 result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
             }
@@ -233,6 +226,8 @@ namespace Octopus.RoslynAnalyzers
         static string CSharpNameForType(ITypeSymbol? symbol)
         {
             var symName = symbol?.Name;
+            if(symName == "") symName = symbol?.ToDisplayString(); // explicit empty string is the "name" for complex types like string[]
+            
             return symName switch
             {
                 nameof(Byte) => "byte",
