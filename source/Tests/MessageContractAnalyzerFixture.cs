@@ -400,30 +400,6 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Test]
-        public async Task IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType() // except collection types
-        {
-            var source = WithOctopusTypes(@"
-namespace Octopus.Core.Features.ServerTasks.MessageContracts
-{
-    /// <summary>request</summary>
-    public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
-    {
-        [Optional]
-        public string? {|#0:EnvironmentId|} { get; set; } // should fire on this
-
-        [Optional]
-        public ProjectId? ProjectId { get; set; } // should not fire on this
-    }
-    /// <summary>response</summary>
-    public class SimpleResponse : IResponse { }
-    public class ProjectId : CaseInsensitiveStringTinyType { }
-}");
-
-            await Verify.VerifyAnalyzerAsync(source,
-                new DiagnosticResult(Descriptors.IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType).WithLocation(0));
-        }
-
-        [Test]
         public async Task MessageTypesMustHaveXmlDocComments()
         {
             var source = WithOctopusTypes(@"
