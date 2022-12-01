@@ -143,8 +143,18 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     public class {|#0:SimpleCommand|}: IRequest<SimpleCommand, SimpleResponse> { }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
-}");
 
+    /// <summary>first cut of analyzer would incorrectly blame base classes for having the wrong name; assert that this is OK now</summary>
+    public abstract class SimpleRequestBase<TRequest, TResponse>: IRequest<TRequest, TResponse>
+        where TRequest : IRequest<TRequest, TResponse>
+        where TResponse : IResponse
+    { }
+}");
+            // TODO all the MessageType stuff needs to keep working even if the concrete class isn't a Command, but it has a base class/interface which is
+            
+            // TODO we should make it illegal to implement IRequest/ICommand/IResponse/IEvent via a base class; it should be on leaf nodes only. Need to discuss.
+            // In practice that's probably impossible to enforce :-(
+            
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(Descriptors.RequestTypesMustBeNamedCorrectly).WithLocation(0));
         }
@@ -196,6 +206,12 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
 
     /// <summary>requestV1</summary>
     public class {|#1:SimpleRequestV1|}: IRequest<SimpleRequestV1, SimpleResult> { } // requestV1 must have matching responseV1
+
+    /// <summary>first cut of analyzer would incorrectly flag base classes; check that abstract turns the logic off</summary>
+    public abstract class SimpleBaseRequest<TRequest, TResponse>: IRequest<TRequest, TResponse>
+        where TRequest : IRequest<TRequest, TResponse>
+        where TResponse : IResponse
+    { }
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
@@ -214,6 +230,12 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     { }
     /// <summary>result</summary>
     public class SimpleResult : IResponse { }
+
+    /// <summary>first cut of analyzer would incorrectly flag base classes; check that abstract turns the logic off</summary>
+    public abstract class SimpleBaseCommand<TCommand, TResponse>: ICommand<TCommand, TResponse>
+        where TCommand : ICommand<TCommand, TResponse>
+        where TResponse : IResponse
+    { }
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
@@ -351,7 +373,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Test]
-        public async Task PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute() // except collection types
+        public async Task PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute()
         {
             var source = WithOctopusTypes(@"
 namespace Octopus.Core.Features.ServerTasks.MessageContracts
@@ -359,20 +381,46 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     /// <summary>request</summary>
     public class SimpleRequest: IRequest<SimpleRequest, SimpleResponse> 
     {
+        protected SimpleRequest() { }
+        public SimpleRequest(string s, int i) 
+        {
+            RequiredStringProperty = s; 
+            AssignedIntProperty = i;
+        }
+
         public string? {|#0:StringProperty|} { get; set; }
 
         public int? {|#1:IntProperty|} { get; set; }
 
+        public int {|#2:AssignedIntProperty|} { get; set; } // should catch this. The fact that it's not set by the constructor isn't relevant
+
+        [Required]
+        public string RequiredStringProperty { get; set; } // allowed
+
         [Optional]
-        public int? OptionalIntProperty { get; set; } // should not fire on this
+        public int? OptionalIntProperty { get; set; } // allowed
     }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
+
+    public class RequestBaseNotUsed
+    {
+        public string UnusedStringProperty { get; set; } // allowed, never used as a resource
+    }
+
+    public abstract class ResponseBase
+    {
+        public string BaseStringProperty { get; set; } // should catch this, used as a resource by superclass SimpleResponse
+    }
+
+    /// <summary>response2</summary>
+    public class SimpleResponse2 : ResponseBase, IResponse { }
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(0),
-                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(1));
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(1),
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(2));
         }
 
         [Test]

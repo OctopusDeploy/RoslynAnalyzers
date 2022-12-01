@@ -59,11 +59,14 @@ namespace Octopus.RoslynAnalyzers
             // first we have to figure out which kind of type we've encountered (if any)
             var apiSurfaceType = DetermineApiSurfaceType(typeDec);
             if (apiSurfaceType == null) return;
-
+            
             // if we get here this is an "API Surface" type; either (request, command, response) or event or resource
             // note technically everything else in the Octopus.Server.MessageContracts namespace is also an "API surface" type, 
             // but verifying that would be more expensive and we don't need to do it yet
             ApiContractTypes_MustLiveInTheAppropriateNamespace(context, typeDec);
+            
+            var isAbstract = typeDec.Modifiers.Any(x => x.IsKind(SyntaxKind.AbstractKeyword));
+            if (isAbstract) return; // don't run analysis at all for abstract base classes that might be used by requests or commands
 
             if (apiSurfaceType is MessageType messageType)
             {
