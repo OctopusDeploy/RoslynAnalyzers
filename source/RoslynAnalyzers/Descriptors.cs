@@ -179,13 +179,8 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
 
-        public static readonly DiagnosticDescriptor IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType = new(
-            "OCT3012",
-            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
-            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
-            Category,
-            DiagnosticSeverity.Error,
-            true);
+        // note: OCT3012 was "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes", but we determined
+        // that wasn't a good fit for an analyzer as we didn't want to enforce it so strictly. The number is free for some future use.
         
         public static readonly DiagnosticDescriptor MessageTypesMustHaveXmlDocComments = new(
             "OCT3013",

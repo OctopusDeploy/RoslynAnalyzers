@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.FindSymbols;
 using static Octopus.RoslynAnalyzers.Descriptors;
 
 namespace Octopus.RoslynAnalyzers
@@ -114,27 +115,6 @@ namespace Octopus.RoslynAnalyzers
             if (string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
             {
                 context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustHaveXmlDocComments, typeDec.Identifier.GetLocation()));
-                return false;
-            }
-
-            return true;
-        }
-
-        static bool IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
-        {
-            var caseInsensitiveStringTinyType = context.Compilation.GetTypeByMetadataName("Octopus.TinyTypes.CaseInsensitiveStringTinyType");
-            
-            // only applies to properties ending in Id, except SpaceId (handled below); also bail if we can't find the declaration of the CaseInsensitiveStringTinyType type
-            if (!propDec.Identifier.Text.EndsWith("Id") || propDec.Identifier.Text == "SpaceId" || caseInsensitiveStringTinyType == null) return true;
-
-            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
-
-            var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propType);
-            if (typeInfo.Type == null) return false;
-
-            if (!typeInfo.Type.IsAssignableTo(caseInsensitiveStringTinyType))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType, propDec.Identifier.GetLocation()));
                 return false;
             }
 

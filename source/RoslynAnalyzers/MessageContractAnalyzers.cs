@@ -31,7 +31,6 @@ namespace Octopus.RoslynAnalyzers
             MessageTypesMustInstantiateCollections,
             PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
             SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId,
-            IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType,
             MessageTypesMustHaveXmlDocComments,
             ApiContractTypesMustLiveInTheAppropriateNamespace);
 
@@ -122,7 +121,6 @@ namespace Octopus.RoslynAnalyzers
                 result &= MessageTypes_MustInstantiateCollections(context, propDec, required, isCollectionType);
                 result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
                 result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
-                result &= IdPropertiesOnMessageTypes_MustBeACaseInsensitiveStringTinyType(context, propDec);
             }
 
             return result;
