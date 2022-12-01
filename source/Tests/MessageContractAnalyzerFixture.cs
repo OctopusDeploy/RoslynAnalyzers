@@ -290,6 +290,8 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
             RequiredIntProperty = requiredInt;
             RequiredBoolProperty = requiredBool;
             RequiredCollectionProperty = requiredCollection;
+
+            IntProperty = 27; // We don't decompile the constructor, it must be an inline initializer so this doesn't count
         }
 
         // --- sanity check required properties aren't affected -----
@@ -324,7 +326,7 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         public string InitializedStringPropertyExplicitNull { get; set; } = null!; // OK; If you really want to break things, then you can.
 
         [Optional]
-        public int {|#1:IntProperty|} { get; set; } // NOT OK, must be nullable or initialized
+        public int {|#1:IntProperty|} { get; set; } // NOT OK, must be nullable or initialized.
 
         [Optional]
         public int? NullableIntProperty { get; set; } // OK
