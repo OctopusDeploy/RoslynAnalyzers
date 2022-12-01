@@ -155,7 +155,14 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
 
-        // OCT3009 was "MessageTypes must instantiate non-nullable collections", but this is now subsumed by our "null or initialized" convention. The ID is free for something else to use
+        [Obsolete("Removed; The case is now covered by the more general OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable diagnostic")]
+        static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
+            "OCT3009",
+            "MessageTypes must instantiate non-nullable collections",
+            "MessageTypes must instantiate non-nullable collections.",
+            Category,
+            DiagnosticSeverity.Hidden,
+            true);
 
         public static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
             "OCT3010",
@@ -173,8 +180,14 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
 
-        // note: OCT3012 was "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes", but we determined
-        // that wasn't a good fit for an analyzer as we didn't want to enforce it so strictly. The number is free for some future use.
+        [Obsolete("Removed; We determined that this wasn't a good fit for an analyzer as we didn't want to enforce it so strictly")]
+        static readonly DiagnosticDescriptor IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType = new(
+            "OCT3012",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            Category,
+            DiagnosticSeverity.Hidden,
+            true);
         
         public static readonly DiagnosticDescriptor MessageTypesMustHaveXmlDocComments = new(
             "OCT3013",
