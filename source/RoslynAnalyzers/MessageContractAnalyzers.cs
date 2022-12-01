@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using static Octopus.RoslynAnalyzers.Descriptors;
@@ -37,7 +38,7 @@ namespace Octopus.RoslynAnalyzers
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-            context.EnableConcurrentExecution();
+            if(!Debugger.IsAttached) context.EnableConcurrentExecution();
             context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.ClassDeclaration, SyntaxKind.StructDeclaration);
         }
 
@@ -57,7 +58,7 @@ namespace Octopus.RoslynAnalyzers
 
             // This analyzer inspects "API Surface" types; i.e. Commands, Requests, Responses, Events and Resources
             // first we have to figure out which kind of type we've encountered (if any)
-            var apiSurfaceType = DetermineApiSurfaceType(typeDec);
+            var apiSurfaceType = DetermineApiSurfaceType(context, typeDec);
             if (apiSurfaceType == null) return;
             
             // if we get here this is an "API Surface" type; either (request, command, response) or event or resource
@@ -80,7 +81,7 @@ namespace Octopus.RoslynAnalyzers
                         if (CommandTypes_MustBeNamedCorrectly(context, typeDec))
                         {
                             // the expected response name depends on the command name; so only run this check if the CommandName was good
-                            CommandTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, commandType.NameSyntax);
+                            CommandTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, commandType.CommandTypeName, commandType.ResponseTypeName);
                         }
 
                         break;
@@ -88,7 +89,7 @@ namespace Octopus.RoslynAnalyzers
                         if (RequestTypes_MustBeNamedCorrectly(context, typeDec))
                         {
                             // the expected response name depends on the request name; so only run this check if the RequestName was good
-                            RequestTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, requestType.NameSyntax);
+                            RequestTypes_MustHaveCorrectlyNamedResponseTypes(context, typeDec, requestType.RequestTypeName, requestType.ResponseTypeName);
                         }
 
                         break;
@@ -137,22 +138,25 @@ namespace Octopus.RoslynAnalyzers
         // I could ObjectPool and make these things mutable but that seems like overkill. Sit on it for a while and think.
         public abstract record ApiSurfaceType
         {
-            public record Event(IdentifierNameSyntax NameSyntax) : ApiSurfaceType;
+            public record Event : ApiSurfaceType;
 
-            public record Resource(IdentifierNameSyntax NameSyntax) : ApiSurfaceType;
+            public record Resource : ApiSurfaceType;
         }
 
         public abstract record MessageType : ApiSurfaceType
         {
-            public record Command(GenericNameSyntax NameSyntax) : MessageType;
+            public record Command(string? CommandTypeName, string? ResponseTypeName) : MessageType;
 
-            public record Request(GenericNameSyntax NameSyntax) : MessageType;
+            public record Request(string? RequestTypeName, string? ResponseTypeName) : MessageType;
 
-            public record Response(IdentifierNameSyntax NameSyntax) : MessageType;
+            public record Response : MessageType;
         }
 
-        static ApiSurfaceType? DetermineApiSurfaceType(TypeDeclarationSyntax typeDeclaration)
+        static ApiSurfaceType? DetermineApiSurfaceType(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDeclaration)
         {
+            bool hasPossibleBaseType = false;
+            
+            // if we can sniff out the API surface type based on syntax nodes, it'll be cheaper than using the semantic model, so do this first
             var baseTypeList = typeDeclaration.BaseList?.ChildNodes().OfType<SimpleBaseTypeSyntax>().SelectMany(baseTypeDec => baseTypeDec.ChildNodes());
             foreach (var baseTypeNode in baseTypeList ?? Enumerable.Empty<SyntaxNode>())
             {
@@ -161,12 +165,18 @@ namespace Octopus.RoslynAnalyzers
                     // This will match anything which has a basetype called ICommand<> whether it's our octopus one or not.
                     // In practice this should be fine, we don't have other ICommand<> or IRequest<> types running around our codebase and the full namespace check is more work.
                     case GenericNameSyntax genericName:
+                      
                         switch (genericName.Identifier.Text)
                         {
                             case TypeNameIRequest:
-                                return new MessageType.Request(genericName);
+                                var typeList = genericName.ChildNodes().OfType<TypeArgumentListSyntax>().FirstOrDefault(tl => tl.Arguments.Count == 2);
+                                return new MessageType.Request((typeList?.Arguments[0] as IdentifierNameSyntax)?.Identifier.Text, (typeList?.Arguments[1] as IdentifierNameSyntax)?.Identifier.Text);
                             case TypeNameICommand:
-                                return new MessageType.Command(genericName);
+                                typeList = genericName.ChildNodes().OfType<TypeArgumentListSyntax>().FirstOrDefault(tl => tl.Arguments.Count == 2);
+                                return new MessageType.Command((typeList?.Arguments[0] as IdentifierNameSyntax)?.Identifier.Text, (typeList?.Arguments[1] as IdentifierNameSyntax)?.Identifier.Text);
+                            default:
+                                hasPossibleBaseType = true;
+                                break;
                         }
 
                         break;
@@ -175,15 +185,30 @@ namespace Octopus.RoslynAnalyzers
                         switch (identifierName.Identifier.Text)
                         {
                             case TypeNameIResponse:
-                                return new MessageType.Response(identifierName);
+                                return new MessageType.Response();
                             case TypeNameIEvent:
-                                return new ApiSurfaceType.Event(identifierName);
+                                return new ApiSurfaceType.Event();
                             case TypeNameResource:
-                                return new ApiSurfaceType.Resource(identifierName);
+                                return new ApiSurfaceType.Resource();
+                            default:
+                                hasPossibleBaseType = true;
+                                break;
                         }
 
                         break;
                 }
+            }
+
+            // else we couldn't determine the message type, but we have some base types that themselves could be a MessageType; do the more expensive SemanticModel check
+            if(hasPossibleBaseType)
+            {
+                var symbol = context.SemanticModel.GetDeclaredSymbol(typeDeclaration, context.CancellationToken);
+                if (symbol.IsAssignableTo(context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Base.IResponse")))
+                {
+                    return new MessageType.Response();
+                }
+                    
+                Console.WriteLine("x");
             }
 
             return null;

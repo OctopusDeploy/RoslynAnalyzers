@@ -48,7 +48,7 @@ namespace Octopus.RoslynAnalyzers
         {
             if (required == RequiredState.Required && propDec.Type is NullableTypeSyntax nts)
             {
-                var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, nts.ElementType);
+                var typeInfo = context.SemanticModel.GetTypeInfo(nts.ElementType);
                 context.ReportDiagnostic(Diagnostic.Create(RequiredPropertiesOnMessageTypesMustNotBeNullable,
                     location: propDec.Identifier.GetLocation(),
                     propDec.Identifier.Text,
@@ -65,7 +65,7 @@ namespace Octopus.RoslynAnalyzers
             {
                 // special-case: non-nullable bool is allowed to have implicit default of false without specifying anything.
                 // TODO @orion.edwards revisit this later when we do explicit defaults properly instead
-                var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propDec.Type);
+                var typeInfo = context.SemanticModel.GetTypeInfo(propDec.Type);
                 var booleanType = context.Compilation.GetSpecialType(SpecialType.System_Boolean);
                 if (SymbolEqualityComparer.Default.Equals(typeInfo.Type, booleanType)) return true;
 
@@ -111,7 +111,7 @@ namespace Octopus.RoslynAnalyzers
             var attrNames = typeDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
             if (attrNames.Any(a => a == "Experimental")) return true;
             
-            var symbol = ModelExtensions.GetDeclaredSymbol(context.SemanticModel, typeDec, cancellationToken: context.CancellationToken);
+            var symbol = context.SemanticModel.GetDeclaredSymbol(typeDec, context.CancellationToken);
             if (string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
             {
                 context.ReportDiagnostic(Diagnostic.Create(MessageTypesMustHaveXmlDocComments, typeDec.Identifier.GetLocation()));
@@ -130,7 +130,7 @@ namespace Octopus.RoslynAnalyzers
 
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
-            var typeInfo = ModelExtensions.GetTypeInfo(context.SemanticModel, propType);
+            var typeInfo = context.SemanticModel.GetTypeInfo(propType);
             if (typeInfo.Type == null) return false;
 
             if (!SymbolEqualityComparer.Default.Equals(typeInfo.Type, spaceIdType))
@@ -160,10 +160,11 @@ namespace Octopus.RoslynAnalyzers
             return false;
         }
 
-        static bool CommandTypes_MustHaveCorrectlyNamedResponseTypes(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, GenericNameSyntax requestOrCommandDec)
+        static bool CommandTypes_MustHaveCorrectlyNamedResponseTypes(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, string? commandTypeName, string? responseTypeName)
             => CheckResponseTypeName(context,
                 typeDec,
-                requestOrCommandDec,
+                commandTypeName,
+                responseTypeName,
                 "Command",
                 CommandTypesMustHaveCorrectlyNamedResponseTypes);
 
@@ -177,10 +178,11 @@ namespace Octopus.RoslynAnalyzers
             return false;
         }
 
-        static bool RequestTypes_MustHaveCorrectlyNamedResponseTypes(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, GenericNameSyntax requestOrCommandDec)
+        static bool RequestTypes_MustHaveCorrectlyNamedResponseTypes(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, string? requestTypeName, string? responseTypeName)
             => CheckResponseTypeName(context,
                 typeDec,
-                requestOrCommandDec,
+                requestTypeName,
+                responseTypeName,
                 "Request",
                 RequestTypesMustHaveCorrectlyNamedResponseTypes);
 
@@ -188,26 +190,22 @@ namespace Octopus.RoslynAnalyzers
         // genericDec is the <TRequest, TResponse> part of the IRequest/Command declaration
         static bool CheckResponseTypeName(SyntaxNodeAnalysisContext context,
             TypeDeclarationSyntax typeDec,
-            GenericNameSyntax genericDec,
+            string? requestOrCommandTypeName,
+            string? responseTypeName,
             string requestOrCommand,
             DiagnosticDescriptor diagnosticToRaise)
         {
-            var typeList = genericDec.ChildNodes().OfType<TypeArgumentListSyntax>().FirstOrDefault(tl => tl.Arguments.Count == 2);
-            if (typeList?.Arguments[1] is IdentifierNameSyntax ns)
+            if (requestOrCommandTypeName == null || responseTypeName == null) return true; // can't work this out; silently skip it
+            
+            var expectedName = ReplaceLast(typeDec.Identifier.Text, requestOrCommand, "Response");
+            if (responseTypeName != expectedName)
             {
-                var responseTypeStr = ns.Identifier.Text;
-                // given class FooRequest : IRequest<FooRequest, FooResponse> we have extracted "FooResponse"
-
-                var expectedName = ReplaceLast(typeDec.Identifier.Text, requestOrCommand, "Response");
-                if (responseTypeStr != expectedName)
-                {
-                    // Future: we should be able to publish a fix-it given we know what the name is supposed to be.
-                    context.ReportDiagnostic(Diagnostic.Create(diagnosticToRaise,
-                        location: typeDec.Identifier.GetLocation(),
-                        expectedName,
-                        responseTypeStr));
-                    return false;
-                }
+                // Future: we should be able to publish a fix-it given we know what the name is supposed to be.
+                context.ReportDiagnostic(Diagnostic.Create(diagnosticToRaise,
+                    location: typeDec.Identifier.GetLocation(),
+                    expectedName,
+                    responseTypeName));
+                return false;
             }
 
             return true;

@@ -259,11 +259,29 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
     }
     /// <summary>response</summary>
     public class SimpleResponse : IResponse { }
+
+    
+    // rule should also apply to classes which pickup ISomething through a base class.
+
+    public abstract class ComplexRequestBase<TRequest, TResponse>: IRequest<TRequest, TResponse>
+        where TRequest : IRequest<TRequest, TResponse>
+        where TResponse : IResponse
+    { }
+
+    public class ComplexRequest : ComplexRequestBase<ComplexRequest, ComplexResponse>
+    {
+        [Optional]
+        public string? {|#2:GetOnlyComplexProp|} { get; } // ComplexRequest is an IRequest, but you have to drill down to the base class to work that out
+    }
+
+    /// <summary>complex response</summary>
+    public class ComplexResponse : IResponse { }
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBeMutable).WithLocation(0).WithArguments("GetOnlyProp"),
-                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBeMutable).WithLocation(1).WithArguments("ComputedProp"));
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBeMutable).WithLocation(1).WithArguments("ComputedProp"),
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBeMutable).WithLocation(2).WithArguments("GetOnlyComplexProp"));
         }
 
         [Test]
@@ -408,19 +426,35 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         public string UnusedStringProperty { get; set; } // allowed, never used as a resource
     }
 
-    public abstract class ResponseBase
+    public abstract class ResponseBaseWithInterface : IResponse { }
+    /// <summary>IResponse isn't defined here, need to pick it up from the base class</summary>
+    public class SimpleResponseNoInterface : ResponseBaseWithInterface 
     {
-        public string BaseStringProperty { get; set; } // should catch this, used as a resource by superclass SimpleResponse
+        public string {|#3:BaseStringProperty|} { get; set; } // should catch this, ResponseBaseC gives us the IResponse interface 
     }
 
-    /// <summary>response2</summary>
-    public class SimpleResponse2 : ResponseBase, IResponse { }
+    public abstract class ResponseBaseNoInterface
+    {
+        public string BaseStringProperty { get; set; } // should catch this, used as a resource by superclass SimpleResponse. Note we have to catch it on the derived class though
+    }
+    /// <summary>IResponse is defined here but need to pick up properties from the base class</summary>
+    public class {|#4:SimpleResponseWithInterface|} : ResponseBaseNoInterface, IResponse { }
+
+    public abstract class ResponseBaseNoInterface2
+    {
+        [Optional]
+        public string? BaseStringProperty { get; set; } // this is OK. Same as above (which should fire), but we've put the attribute on properly this time
+    }
+    /// <summary>responseB</summary>
+    public class SimpleResponseWithInterface2 : ResponseBaseNoInterface2, IResponse { }
+
 }");
 
             await Verify.VerifyAnalyzerAsync(source,
                 new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(0),
                 new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(1),
-                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(2));
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(2),
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute).WithLocation(3));
         }
 
         [Test]
