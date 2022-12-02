@@ -147,20 +147,21 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
 
-        public static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeNullable = new(
+        public static readonly DiagnosticDescriptor OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable = new(
             "OCT3008",
-            "Optional Properties on MessageTypes must be nullable",
-            "Property \"{0}\" should be of type {1}? (Optional Properties on MessageTypes must be nullable)",
+            "Optional Properties on MessageTypes must be nullable or have initializers",
+            "Property \"{0}\" should have initializer or be of type {1}? (Optional Properties on MessageTypes must be initialized or nullable)",
             Category,
             DiagnosticSeverity.Error,
             true);
 
-        public static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
+        [Obsolete("Removed; The case is now covered by the more general OptionalPropertiesOnMessageTypesMustBeInitializedOrNullable diagnostic")]
+        static readonly DiagnosticDescriptor MessageTypesMustInstantiateCollections = new(
             "OCT3009",
             "MessageTypes must instantiate non-nullable collections",
             "MessageTypes must instantiate non-nullable collections.",
             Category,
-            DiagnosticSeverity.Error,
+            DiagnosticSeverity.Hidden,
             true);
 
         public static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute = new(
@@ -179,8 +180,14 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
 
-        // note: OCT3012 was "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes", but we determined
-        // that wasn't a good fit for an analyzer as we didn't want to enforce it so strictly. The number is free for some future use.
+        [Obsolete("Removed; We determined that this wasn't a good fit for an analyzer as we didn't want to enforce it so strictly")]
+        static readonly DiagnosticDescriptor IdPropertiesOnMessageTypesMustBeACaseInsensitiveStringTinyType = new(
+            "OCT3012",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            "Id Properties on Message Types should be CaseInsensitiveStringTinyTypes",
+            Category,
+            DiagnosticSeverity.Hidden,
+            true);
         
         public static readonly DiagnosticDescriptor MessageTypesMustHaveXmlDocComments = new(
             "OCT3013",
