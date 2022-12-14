@@ -582,6 +582,8 @@ namespace Octopus.TinyTypes
                 "System",
                 "System.Collections.Generic",
                 "System.ComponentModel.DataAnnotations",
+                "System.Threading",
+                "System.Threading.Tasks",
                 "Octopus.Server.MessageContracts",
                 "Octopus.Server.MessageContracts.Base",
                 "Octopus.Server.MessageContracts.Base.Attributes",

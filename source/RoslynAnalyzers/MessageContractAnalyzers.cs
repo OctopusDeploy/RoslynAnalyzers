@@ -6,8 +6,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System;
-using System.Diagnostics;
-using System.Threading;
 using static Octopus.RoslynAnalyzers.Descriptors;
 
 namespace Octopus.RoslynAnalyzers
