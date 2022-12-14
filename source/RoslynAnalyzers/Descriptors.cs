@@ -36,13 +36,13 @@ namespace Octopus.RoslynAnalyzers
 
         // ----- General Analyzers that apply everywhere. Informally in the OCT1xxx number range ------
 
-        // public static readonly DiagnosticDescriptor VoidMethodsMustNotBeAsync = new(
-        //     "OCT1001",
-        //     "Void methods must not be async.",
-        //     "Void methods must not be async.",
-        //     Category,
-        //     DiagnosticSeverity.Error,
-        //     true);
+        public static readonly DiagnosticDescriptor VoidMethodsMustNotBeAsync = new(
+            "OCT1001",
+            "Void methods must not be async.",
+            "Void methods must not be async.",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
         //
         // public static readonly DiagnosticDescriptor AsyncMethodsMustNotHaveAsyncSuffix = new(
         //     "OCT1002",

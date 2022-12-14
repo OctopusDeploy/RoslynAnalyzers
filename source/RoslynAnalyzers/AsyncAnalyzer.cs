@@ -2,7 +2,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -10,12 +9,13 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Octopus.RoslynAnalyzers;
 
-using static Octopus.RoslynAnalyzers.Descriptors;
+using static Descriptors;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class AsyncAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
+        VoidMethodsMustNotBeAsync,
         MethodsReturningTaskMustBeAsync);
 
     public override void Initialize(AnalysisContext context)
@@ -31,14 +31,28 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
     {
         if (context.Node is not MethodDeclarationSyntax methodDec) return;
 
-        if (methodDec.ReturnType is not SimpleNameSyntax { Identifier.Text: "Task" or "ValueTask" })
+        var isAsync = methodDec.Modifiers.Any(SyntaxKind.AsyncKeyword);
+        
+        if(isAsync) VoidMethods_MustNotBeAsync(context, methodDec);
+        
+        if (methodDec.ReturnType is SimpleNameSyntax { Identifier.Text: "Task" or "ValueTask" })
         {
-            // if it doesn't return Task or ValueTask then we don't care about it
-            return;
+            MethodsReturningTask_MustBeAsync(context, methodDec, isAsync);
         }
+    }
 
+    void VoidMethods_MustNotBeAsync(SyntaxNodeAnalysisContext context, MethodDeclarationSyntax methodDec)
+    {
+        if (methodDec.ReturnType is PredefinedTypeSyntax p && p.Keyword.IsKind(SyntaxKind.VoidKeyword))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(VoidMethodsMustNotBeAsync, methodDec.Identifier.GetLocation()));
+        }
+    }
+
+    void MethodsReturningTask_MustBeAsync(SyntaxNodeAnalysisContext context, MethodDeclarationSyntax methodDec, bool isAsync)
+    {
         // don't flag things that are async (that's good!) or abstract methods.
-        if (methodDec.Modifiers.Any(SyntaxKind.AsyncKeyword) || methodDec.Modifiers.Any(SyntaxKind.AbstractKeyword)) return;
+        if (isAsync || methodDec.Modifiers.Any(SyntaxKind.AbstractKeyword)) return;
             
         var declaringType = methodDec.Parent;
         while (declaringType is not null && declaringType is not TypeDeclarationSyntax) declaringType = declaringType.Parent;

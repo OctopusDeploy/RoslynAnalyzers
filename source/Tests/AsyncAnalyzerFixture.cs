@@ -94,6 +94,29 @@ namespace Octopus.Core
                 .Select(i => new DiagnosticResult(Descriptors.MethodsReturningTaskMustBeAsync).WithLocation(i))
                 .ToArray()); 
         }
+        
+        [Test]
+        public async Task VoidMethodsMustNotBeAsync()
+        {
+            var source = WithOctopusTypes(@"
+namespace Octopus.Core
+{
+  static class SomeClass
+  {
+    static int PlainOldMethodReturningInt(CancellationToken cancellationToken) => 0;
+
+    static void RegularVoidMethod()
+    { }
+
+    static async void {|#0:AsyncVoidMethod|}()
+    { await Task.CompletedTask; }
+  }
+}");
+            await Verify.VerifyAnalyzerAsync(source, 
+                Enumerable.Range(0, 1)
+                .Select(i => new DiagnosticResult(Descriptors.VoidMethodsMustNotBeAsync).WithLocation(i))
+                .ToArray()); 
+        }
 
         static readonly string AsyncTestTypeDeclarations = @"
 namespace Octopus.Server.Extensibility.Extensions.Infrastructure.Web.Api
