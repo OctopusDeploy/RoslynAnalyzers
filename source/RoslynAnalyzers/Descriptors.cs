@@ -34,6 +34,61 @@ namespace Octopus.RoslynAnalyzers
             Environment.NewLine +
             "Reach out to @team-core-blue if you need any help with strategies to test efficiently without base classes.";
 
+        // ----- General Analyzers that apply everywhere. Informally in the OCT1xxx number range ------
+
+        // public static readonly DiagnosticDescriptor VoidMethodsMustNotBeAsync = new(
+        //     "OCT1001",
+        //     "Void methods must not be async.",
+        //     "Void methods must not be async.",
+        //     Category,
+        //     DiagnosticSeverity.Error,
+        //     true);
+        //
+        // public static readonly DiagnosticDescriptor AsyncMethodsMustNotHaveAsyncSuffix = new(
+        //     "OCT1002",
+        //     "Async methods must not be named with an 'Async' suffix.",
+        //     "Async methods must not be named with an 'Async' suffix.",
+        //     Category,
+        //     DiagnosticSeverity.Error,
+        //     true);
+        
+        public static readonly DiagnosticDescriptor MethodsReturningTaskMustBeAsync = new(
+            "OCT1003",
+            "Methods returning Task must be async.",
+            "Methods returning Task must be async.",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+
+        // // Might not want to do this one as it has a lot of exemptions. Or maybe only have it at info level?
+        // public static readonly DiagnosticDescriptor AsyncMethodsMustTakeACancellationToken = new(
+        //     "OCT1004",
+        //     "Async methods must take a CancellationToken.",
+        //     "Async methods must take a CancellationToken.",
+        //     Category,
+        //     DiagnosticSeverity.Error,
+        //     true);
+        
+        // // Might not want to do this one as it has a lot of exemptions. Or maybe only have it at info level?
+        // public static readonly DiagnosticDescriptor MustNotBlockOnTaskResults = new(
+        //     "OCT1005",
+        //     "Must not Block on Task Results.",
+        //     "Must not Block on Task Results.",
+        //     Category,
+        //     DiagnosticSeverity.Error,
+        //     true);
+        //
+        // // Might not want to do this one. Or maybe only have it at info level?
+        // public static readonly DiagnosticDescriptor MustNotUseGetAwaiterExplicitly = new(
+        //     "OCT1006",
+        //     "Must not use GetAwaiter explicitly.",
+        //     "Must not use GetAwaiter explicitly.",
+        //     Category,
+        //     DiagnosticSeverity.Error,
+        //     true);
+        
+        // ----- Analyzers to help with Tests. Informally in the OCT2xxx number range -----
+        
         public static DiagnosticDescriptor Oct2001NoIntegrationTestBaseClasses => GetTestAnalyzerDescriptor(
             "OCT2001",
             "Integration test classes should inherit directly from IntegrationTest",
@@ -87,7 +142,7 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
                 + "or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token.");
         }
         
-        // ----- Message Contract Analyzers -----
+        // ----- Message Contract Analyzers. Informally in the OCT30xx number range -----
         
         const string Category = "Octopus";
 
@@ -204,5 +259,10 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             Category,
             DiagnosticSeverity.Error,
             true);
+        
+        // ----- Controller / Handler Analyzers. Informally in the OCT32xx range
+        
+        
+        
     }
 }
