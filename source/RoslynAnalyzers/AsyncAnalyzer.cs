@@ -21,9 +21,7 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
-        
-        if(!Debugger.IsAttached) context.EnableConcurrentExecution();
-        
+        context.EnableConcurrentExecution();
         context.RegisterSyntaxNodeAction(CheckNode, SyntaxKind.MethodDeclaration);
     }
 
@@ -32,9 +30,11 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
         if (context.Node is not MethodDeclarationSyntax methodDec) return;
 
         var isAsync = methodDec.Modifiers.Any(SyntaxKind.AsyncKeyword);
-        
-        if(isAsync) VoidMethods_MustNotBeAsync(context, methodDec);
-        
+        if (isAsync)
+        {
+            VoidMethods_MustNotBeAsync(context, methodDec);
+        }
+
         if (methodDec.ReturnType is SimpleNameSyntax { Identifier.Text: "Task" or "ValueTask" })
         {
             MethodsReturningTask_MustBeAsync(context, methodDec, isAsync);
@@ -53,24 +53,24 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
     {
         // don't flag things that are async (that's good!) or abstract methods.
         if (isAsync || methodDec.Modifiers.Any(SyntaxKind.AbstractKeyword)) return;
-            
+
         var declaringType = methodDec.Parent;
         while (declaringType is not null && declaringType is not TypeDeclarationSyntax) declaringType = declaringType.Parent;
 
         if (declaringType is InterfaceDeclarationSyntax) return; // don't flag on interfaces
-        
+
         // exemption for classes implementing IAsyncApiAction
         if (declaringType is ClassDeclarationSyntax classDec)
         {
             var baseTypeList = classDec.BaseList?.ChildNodes().OfType<SimpleBaseTypeSyntax>().SelectMany(baseTypeDec => baseTypeDec.ChildNodes());
             if (baseTypeList != null && baseTypeList.Any(b => b is IdentifierNameSyntax { Identifier.Text: "IAsyncApiAction" })) return;
         }
-        
+
         // exemption for things in Octopus.Server.Extensibility. Note that the reflection based test does this by seeing if the Assembly Name
         // has Octopus.Server.Extensibility somewhere in it. We can't do that so easily; use namespace as an approximation (it wasn't exact anyway)
 
         if (declaringType != null && declaringType.GetNamespace().Contains("Octopus.Server.Extensibility")) return;
-        
+
         context.ReportDiagnostic(Diagnostic.Create(MethodsReturningTaskMustBeAsync, methodDec.Identifier.GetLocation()));
     }
 }
