@@ -6,6 +6,22 @@ namespace Octopus.RoslynAnalyzers
     public static class SyntaxModelExtensionMethods
     {
         /// <summary>
+        /// Walks up the syntax tree until it reaches a TypeDeclaration. Returns null if one cannot be found
+        /// </summary>
+        /// <param name="methodDec"></param>
+        /// <returns></returns>
+        public static TypeDeclarationSyntax? GetDeclaringType(this MethodDeclarationSyntax methodDec)
+        {
+            var parent = methodDec.Parent;
+            while (parent is not null && parent is not TypeDeclarationSyntax)
+            {
+                parent = parent.Parent;
+            }
+
+            return parent as TypeDeclarationSyntax;
+        }
+        
+        /// <summary>
         /// Walks up the syntax tree until it reaches a namespace at the top. Returns empty string if one cannot be found
         /// </summary>
         /// <remarks>

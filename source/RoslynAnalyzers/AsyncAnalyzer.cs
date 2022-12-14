@@ -34,10 +34,9 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
         {
             VoidMethods_MustNotBeAsync(context, methodDec);
         }
-
-        if (methodDec.ReturnType is SimpleNameSyntax { Identifier.Text: "Task" or "ValueTask" })
+        else
         {
-            MethodsReturningTask_MustBeAsync(context, methodDec, isAsync);
+            MethodsReturningTask_MustBeAsync(context, methodDec);
         }
     }
 
@@ -49,15 +48,17 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    void MethodsReturningTask_MustBeAsync(SyntaxNodeAnalysisContext context, MethodDeclarationSyntax methodDec, bool isAsync)
+    void MethodsReturningTask_MustBeAsync(SyntaxNodeAnalysisContext context, MethodDeclarationSyntax methodDec)
     {
-        // don't flag things that are async (that's good!) or abstract methods.
-        if (isAsync || methodDec.Modifiers.Any(SyntaxKind.AbstractKeyword)) return;
+        // don't flag things that don't return tasks
+        if (methodDec.ReturnType is not SimpleNameSyntax { Identifier.Text: "Task" or "ValueTask" }) return;
+        
+        // don't flag abstract methods. Like interfaces they can't have the async keyword attached to them.
+        if (methodDec.Modifiers.Any(SyntaxKind.AbstractKeyword)) return;
 
-        var declaringType = methodDec.Parent;
-        while (declaringType is not null && declaringType is not TypeDeclarationSyntax) declaringType = declaringType.Parent;
+        var declaringType = methodDec.GetDeclaringType();
 
-        if (declaringType is InterfaceDeclarationSyntax) return; // don't flag on interfaces
+        if (declaringType is InterfaceDeclarationSyntax) return; // don't flag on interfaces, they can't have the async keyword attached to them.
 
         // exemption for classes implementing IAsyncApiAction
         if (declaringType is ClassDeclarationSyntax classDec)
