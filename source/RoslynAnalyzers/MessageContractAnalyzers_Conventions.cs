@@ -3,7 +3,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
-using Microsoft.CodeAnalysis.FindSymbols;
 using static Octopus.RoslynAnalyzers.Descriptors;
 
 namespace Octopus.RoslynAnalyzers
@@ -32,11 +31,42 @@ namespace Octopus.RoslynAnalyzers
             return false;
         }
 
+        static bool WeDoNotUseEnums_InOurApiSurface(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec, bool isExperimental)
+        {
+            // types marked experimental such as BFF's are allowed to use enums as they aren't constrained by compatibility across more than one version.
+            if (isExperimental) return true;
+            
+            var systemEnum = context.Compilation.GetSpecialType(SpecialType.System_Enum);
+
+            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
+            var t = context.SemanticModel.GetTypeInfo(propType);
+            
+            if (SymbolEqualityComparer.Default.Equals(t.Type?.BaseType, systemEnum))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(WeDoNotUseEnumsInOurApiSurface,
+                    location: propDec.Identifier.GetLocation(),
+                    propDec.Identifier.Text));
+                return false;
+            }
+
+            return true;
+        }
+
+        static bool PropertiesOnMessageTypes_MustBePublic(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
+        {
+            var isPublic = propDec.Modifiers.Any(SyntaxKind.PublicKeyword);
+            if (isPublic) return true;
+
+            context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustBePublic,
+                location: propDec.Identifier.GetLocation(),
+                propDec.Identifier.Text));
+            return false;
+        }
+
         static bool PropertiesOnMessageTypes_MustBeMutable(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
             var hasSetter = propDec.AccessorList?.Accessors.Any(a => a.IsKind(SyntaxKind.SetAccessorDeclaration)) ?? false;
-            if (hasSetter)
-                return true;
+            if (hasSetter) return true;
 
             context.ReportDiagnostic(Diagnostic.Create(PropertiesOnMessageTypesMustBeMutable,
                 location: propDec.Identifier.GetLocation(),
@@ -87,13 +117,12 @@ namespace Octopus.RoslynAnalyzers
             return true;
         }
 
-        static bool MessageTypes_MustHaveXmlDocComments(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
+        static bool MessageTypes_MustHaveXmlDocComments(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, bool isExperimental)
         {
             // Filter out types that have [Experimental] attribute, those don't need XMLDocs.
             // The syntax model is faster than the semantic model so we check this first 
-            var attrNames = typeDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
-            if (attrNames.Any(a => a == "Experimental")) return true;
-            
+            if (isExperimental) return true;
+
             var symbol = ModelExtensions.GetDeclaredSymbol(context.SemanticModel, typeDec, cancellationToken: context.CancellationToken);
             if (string.IsNullOrWhiteSpace(symbol?.GetDocumentationCommentXml(cancellationToken: context.CancellationToken)))
             {
@@ -107,7 +136,7 @@ namespace Octopus.RoslynAnalyzers
         static bool SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(SyntaxNodeAnalysisContext context, PropertyDeclarationSyntax propDec)
         {
             var spaceIdType = context.Compilation.GetTypeByMetadataName("Octopus.Server.MessageContracts.Features.Spaces.SpaceId");
-            
+
             // only applies to properties literally called SpaceId; also bail if we can't find the declaration of the SpaceId type
             if (propDec.Identifier.Text != "SpaceId" || spaceIdType == null) return true;
 
