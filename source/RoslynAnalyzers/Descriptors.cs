@@ -262,7 +262,20 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
         
         // ----- Controller / Handler Analyzers. Informally in the OCT32xx range
         
+        public static readonly DiagnosticDescriptor MustNotHaveSwaggerOperationAttribute = new(
+            "OCT3201",
+            "Do not use SwaggerOperationAttribute.",
+            "Do not use SwaggerOperationAttribute",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
         
-        
+        public static readonly DiagnosticDescriptor MustNotReturnActionResults = new(
+            "OCT3202",
+            "Must not return ActionResults.",
+            "Must not return ActionResults",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
     }
 }

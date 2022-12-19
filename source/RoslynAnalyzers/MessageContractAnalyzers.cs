@@ -204,7 +204,7 @@ namespace Octopus.RoslynAnalyzers
         {
             var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
 
-            var typeInfo = context.SemanticModel.GetTypeInfo(propType);
+            var typeInfo = context.SemanticModel.GetTypeInfo(propType, context.CancellationToken);
             if (typeInfo.Type == null) return false;
 
             var enumerableType = context.Compilation.GetSpecialType(SpecialType.System_Collections_IEnumerable);
