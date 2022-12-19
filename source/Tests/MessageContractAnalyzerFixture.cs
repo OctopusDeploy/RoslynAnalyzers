@@ -221,6 +221,33 @@ namespace Octopus.Core.Features.ServerTasks.MessageContracts
         }
 
         [Test]
+        public async Task PropertiesOnMessageTypesMustBePublic()
+        {
+            var source = WithOctopusTypes(@"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    /// <summary>command</summary>
+    public class SimpleCommand: ICommand<SimpleCommand, SimpleResponse> 
+    {
+        [Optional]
+        public string? PublicOptionalProp { get; set; } // should not fire on this
+
+        [Optional]
+        string? {|#0:PrivateOptionalProp|} { get; set; }
+
+        [Optional]
+        protected string? {|#1:ProtectedOptionalProp|} { get; set; }
+    }
+    /// <summary>response</summary>
+    public class SimpleResponse : IResponse { }
+}");
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBePublic).WithLocation(0).WithArguments("PrivateOptionalProp"),
+                new DiagnosticResult(Descriptors.PropertiesOnMessageTypesMustBePublic).WithLocation(1).WithArguments("ProtectedOptionalProp"));
+        }
+
+        [Test]
         public async Task PropertiesOnMessageTypesMustBeMutable()
         {
             var source = WithOctopusTypes(@"
@@ -537,6 +564,35 @@ namespace Octopus {
                 new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(12),
                 new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(13),
                 new DiagnosticResult(Descriptors.ApiContractTypesMustLiveInTheAppropriateNamespace).WithLocation(14));
+        }
+
+        [Test]
+        public async Task WeDoNotUseEnumsInOurApiSurface()
+        {
+            var source = WithOctopusTypes(@"
+namespace Octopus.Core.Features.ServerTasks.MessageContracts
+{
+    /// <summary>a command</summary>
+    public class SomeCommand: ICommand<SomeCommand, SomeResponse> 
+    {
+        [Optional]
+        public string? Str1 {get;set;}
+
+        [Optional]
+        public DateTimeKind? {|#0:OptionalNullableEnum|} {get;set;}
+
+        [Optional]
+        public DateTimeKind {|#1:OptionalDefaultedEnum|} {get;set;} = DateTimeKind.Utc;
+    }
+    /// <summary>a response</summary>
+    public class SomeResponse : IResponse { }
+}
+");
+
+            await Verify.VerifyAnalyzerAsync(source,
+                new DiagnosticResult(Descriptors.WeDoNotUseEnumsInOurApiSurface).WithLocation(0).WithArguments("OptionalNullableEnum"),
+                new DiagnosticResult(Descriptors.WeDoNotUseEnumsInOurApiSurface).WithLocation(1).WithArguments("OptionalDefaultedEnum")
+            );
         }
 
         static string WithOctopusTypes(string source) => $"{Common.Usings}{source}{Common.MessageTypeDeclarations}";

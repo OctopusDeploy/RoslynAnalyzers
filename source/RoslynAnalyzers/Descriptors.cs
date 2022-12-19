@@ -260,6 +260,22 @@ Any other complex logic or state should be in builders, class/assembly fixtures,
             DiagnosticSeverity.Error,
             true);
         
+        public static readonly DiagnosticDescriptor PropertiesOnMessageTypesMustBePublic = new(
+            "OCT3015",
+            "Properties on MessageTypes must be Public.",
+            "Property \"{0}\" should be public (Properties on MessageTypes must be Public)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+        
+        public static readonly DiagnosticDescriptor WeDoNotUseEnumsInOurApiSurface = new(
+            "OCT3016",
+            "We do not use enums in our API surface.",
+            "Property \"{0}\" should be string-based TinyType or some other equivalent (We do not use enums in our API surface)",
+            Category,
+            DiagnosticSeverity.Error,
+            true);
+        
         // ----- Controller / Handler Analyzers. Informally in the OCT32xx range
         
         public static readonly DiagnosticDescriptor MustNotHaveSwaggerOperationAttribute = new(

@@ -29,7 +29,9 @@ namespace Octopus.RoslynAnalyzers
             PropertiesOnMessageTypesMustHaveAtLeastOneValidationAttribute,
             SpaceIdPropertiesOnMessageTypesMustBeOfTypeSpaceId,
             MessageTypesMustHaveXmlDocComments,
-            ApiContractTypesMustLiveInTheAppropriateNamespace);
+            ApiContractTypesMustLiveInTheAppropriateNamespace,
+            PropertiesOnMessageTypesMustBePublic,
+            WeDoNotUseEnumsInOurApiSurface);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -56,17 +58,22 @@ namespace Octopus.RoslynAnalyzers
             // first we have to figure out which kind of type we've encountered (if any)
             var apiSurfaceType = DetermineApiSurfaceType(typeDec);
             if (apiSurfaceType == null) return;
+            
+            var attrNames = typeDec.AttributeLists.SelectMany(al => al.Attributes.Select(a => (a.Name as IdentifierNameSyntax)?.Identifier.Text));
+            // some rules are applied differently to types marked experimental (e.g. BFF's)
+            bool isExperimental = attrNames.Any(a => a == "Experimental");
 
             // if we get here this is an "API Surface" type; either (request, command, response) or event or resource
             // note technically everything else in the Octopus.Server.MessageContracts namespace is also an "API surface" type, 
             // but verifying that would be more expensive and we don't need to do it yet
             ApiContractTypes_MustLiveInTheAppropriateNamespace(context, typeDec);
 
+            bool isMessageType = false;
             if (apiSurfaceType is MessageType messageType)
             {
+                isMessageType = true;
                 // this is a "MessageType"; either request, command, or response
-                CheckMessageTypeProperties(context, typeDec);
-                MessageTypes_MustHaveXmlDocComments(context, typeDec);
+                MessageTypes_MustHaveXmlDocComments(context, typeDec, isExperimental);
 
                 switch (messageType)
                 {
@@ -94,24 +101,37 @@ namespace Octopus.RoslynAnalyzers
                 EventTypes_MustBeNamedCorrectly(context, typeDec);
             }
             // no specific checks for resources at this point
+            
+            // now check properties
+            CheckProperties(context, typeDec, isExperimental, isMessageType);
         }
 
-        static bool CheckMessageTypeProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec)
+        static bool CheckProperties(SyntaxNodeAnalysisContext context, TypeDeclarationSyntax typeDec, bool isExperimental, bool isMessageType)
         {
             var result = true;
             foreach (var propDec in typeDec.DescendantNodes().OfType<PropertyDeclarationSyntax>())
             {
-                // only validate public properties
-                if (!propDec.Modifiers.Any(m => m.IsKind(SyntaxKind.PublicKeyword))) continue;
+                // generic checks across all api surface types
+                result &= WeDoNotUseEnums_InOurApiSurface(context, propDec, isExperimental);
+                
+                // more detailed checks for request/command/response
+                if (isMessageType)
+                {
+                    var isPublic = PropertiesOnMessageTypes_MustBePublic(context, propDec);
 
-                var required = GetRequiredState(propDec);
+                    if (!isPublic) continue;
+                    // the rest of the checks only apply to public properties.
+                    // if someone were to suppress the public warning because they really needed a protected property, then all the rules don't apply
 
-                // if anything returns false, propagate false outwards
-                result &= PropertiesOnMessageTypes_MustBeMutable(context, propDec);
-                result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec, required);
-                result &= OptionalPropertiesOnMessageTypes_MustBeInitializedOrNullable(context, propDec, required);
-                result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
-                result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
+                    var required = GetRequiredState(propDec);
+                    // if anything returns false, propagate false outwards
+                    result &= isPublic;
+                    result &= PropertiesOnMessageTypes_MustBeMutable(context, propDec);
+                    result &= RequiredPropertiesOnMessageTypes_MustNotBeNullable(context, propDec, required);
+                    result &= OptionalPropertiesOnMessageTypes_MustBeInitializedOrNullable(context, propDec, required);
+                    result &= PropertiesOnMessageTypes_MustHaveAtLeastOneValidationAttribute(context, propDec, required);
+                    result &= SpaceIdPropertiesOnMessageTypes_MustBeOfTypeSpaceId(context, propDec);
+                }
             }
 
             return result;
