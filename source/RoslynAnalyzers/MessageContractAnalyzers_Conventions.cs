@@ -38,10 +38,10 @@ namespace Octopus.RoslynAnalyzers
             
             var systemEnum = context.Compilation.GetSpecialType(SpecialType.System_Enum);
 
-            var propType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
-            var t = context.SemanticModel.GetTypeInfo(propType);
+            var propertyType = propDec.Type is NullableTypeSyntax n ? n.ElementType : propDec.Type;
+            var propertyTypeInfo = context.SemanticModel.GetTypeInfo(propertyType);
             
-            if (SymbolEqualityComparer.Default.Equals(t.Type?.BaseType, systemEnum))
+            if (SymbolEqualityComparer.Default.Equals(propertyTypeInfo.Type?.BaseType, systemEnum))
             {
                 context.ReportDiagnostic(Diagnostic.Create(WeDoNotUseEnumsInOurApiSurface,
                     location: propDec.Identifier.GetLocation(),
