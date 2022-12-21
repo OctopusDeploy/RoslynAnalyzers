@@ -29,7 +29,7 @@ namespace Octopus.Core
             var source = WithOctopusTypes(@"
 namespace Octopus.Core
 {
-  namespace A {
+  namespace _SwaggerOperation {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       [{|#0:SwaggerOperation(""some swagger thing"")|}]
@@ -37,7 +37,7 @@ namespace Octopus.Core
     }
   }
 
-  namespace B {
+  namespace _Experimental {
     [Experimental] // should not fire on experimental
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
@@ -46,7 +46,7 @@ namespace Octopus.Core
     }
   }
 
-  namespace C {
+  namespace _NonPublic {
     // should not fire on nonpublic method
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
@@ -64,13 +64,13 @@ namespace Octopus.Core
         {
             var source = WithOctopusTypes(@"
 namespace Octopus.ApiControllerTests.Good {
-  namespace A {
+  namespace _String {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public string GetFoo(GetFooRequest request) => ""some string"";
     }
   }
-  namespace A_Task {
+  namespace _Task_String {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public async Task<string> GetFoo(GetFooRequest request) {
@@ -83,13 +83,13 @@ namespace Octopus.ApiControllerTests.Good {
 
 namespace Octopus.ApiControllerTests.Violations
 {
-  namespace A {
+  namespace _IActionResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public {|#0:IActionResult|} GetFoo(GetFooRequest request) => new ObjectResult();
     }
   }
-  namespace A_Task {
+  namespace _Task_IActionResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public async {|#1:Task<IActionResult>|} GetFoo(GetFooRequest request) {
@@ -99,27 +99,27 @@ namespace Octopus.ApiControllerTests.Violations
     }
   }
 
-  namespace B {
+  namespace _ContentResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public {|#2:ContentResult|} GetFoo(GetFooRequest request) => new ContentResult();
     }
   }
     
-  namespace C {
+  namespace _CreatedResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public {|#3:CreatedResult|} GetFoo(GetFooRequest request) => new CreatedResult();
     }
   }
 
-  namespace D {
+  namespace _ConvertibleToActionResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public {|#4:ConvertibleToActionResult|} GetFoo(GetFooRequest request) => new ConvertibleToActionResult();
     }
   }
-  namespace D_Task {
+  namespace _Task_ConvertibleToActionResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public async {|#5:Task<ConvertibleToActionResult>|} GetFoo(GetFooRequest request) {
@@ -131,44 +131,52 @@ namespace Octopus.ApiControllerTests.Violations
 }
 
 namespace Octopus.ApiControllerTests.Exempt {
-  namespace A {
+  using Octopus.Server.Extensibility.Web.Extensions; // for CreatedResult<T>
+  namespace _CreatedResult_T {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public CreatedResult<string> GetFoo(GetFooRequest request) => new CreatedResult<string>();
     }
   }
-  namespace A_Task {
+  namespace _Task_CreatedResult_T {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public Task<CreatedResult<string>> GetFoo(GetFooRequest request) => Task.FromResult(new CreatedResult<string>());
     }
   }
 
-  namespace B {
+  namespace _AmplitudeOkResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public Octopus.Server.Web.Controllers.Telemetry.AmplitudeOkResult GetFoo(GetFooRequest request) => new();
     }
   }
 
-  namespace C {
+  namespace _BlobResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public BlobResult GetFoo(GetFooRequest request) => new();
     }
   }
 
-  namespace D {
+  namespace _CsvFileResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public CsvFileResult GetFoo(GetFooRequest request) => new();
     }
   }
 
-  namespace E {
+  namespace _FileResult {
     public class GetFooController : ControllerBase {
       [HttpGet(""/api/foos"")]
       public FileResult GetFoo(GetFooRequest request) => new();
+    }
+  }
+
+  namespace _FileContentResult {
+    public class GetFooController : ControllerBase {
+      [HttpGet(""/api/foos"")]
+      public FileContentResult GetFoo(GetFooRequest request) => new();
     }
   }
 }");
@@ -202,8 +210,8 @@ namespace Microsoft.AspNetCore.Mvc {
   public class ContentResult : ActionResult { }
   public class ObjectResult : ActionResult { }
   public class CreatedResult : ObjectResult { }
-  public class CreatedResult<TResponse> : CreatedResult { }
   public class FileResult : ActionResult { }
+  public class FileContentResult : FileResult { }
 
   namespace Infrastructure {
     public interface IConvertToActionResult { }
@@ -214,6 +222,9 @@ namespace Octopus.Server.Web.Infrastructure {
   public class BlobResult : FileResult { }
 
   public class ConvertibleToActionResult : Microsoft.AspNetCore.Mvc.Infrastructure.IConvertToActionResult { }
+}
+namespace Octopus.Server.Extensibility.Web.Extensions {
+  public class CreatedResult<TResponse> : Microsoft.AspNetCore.Mvc.CreatedResult { }
 }
 namespace Octopus.Server.Web.Controllers.Telemetry {
   public class AmplitudeOkResult : ContentResult { }

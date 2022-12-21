@@ -83,11 +83,16 @@ public partial class ApiControllerAnalyzer : DiagnosticAnalyzer
         if (typeSymbol.AllInterfaces.Any(a => symCmp.Equals(a, actionResultType) || symCmp.Equals(a, convertToActionResultType)))
         {
             // exemptions for specific types
-            if (symCmp.Equals(typeSymbol, context.Compilation.GetTypeByMetadataName("Microsoft.AspNetCore.Mvc.FileResult"))) return true;
             if (symCmp.Equals(typeSymbol, context.Compilation.GetTypeByMetadataName("Octopus.Server.Web.Infrastructure.BlobResult"))) return true;
             if (symCmp.Equals(typeSymbol, context.Compilation.GetTypeByMetadataName("Octopus.Server.Web.Infrastructure.CsvFileResult"))) return true;
             if (symCmp.Equals(typeSymbol, context.Compilation.GetTypeByMetadataName("Octopus.Server.Web.Controllers.Telemetry.AmplitudeOkResult"))) return true;
-            if (symCmp.Equals(typeSymbol.OriginalDefinition, context.Compilation.GetTypeByMetadataName("Microsoft.AspNetCore.Mvc.CreatedResult`1"))) return true; // only CreatedResult<T> is allowed, the non-generic one isn't
+         
+            // FileResult plus derived classes FileContentResult and FileStreamResult
+            var fileResult = context.Compilation.GetTypeByMetadataName("Microsoft.AspNetCore.Mvc.FileResult");
+            if (symCmp.Equals(typeSymbol, fileResult) || typeSymbol.InheritsFrom(fileResult)) return true;
+            
+            // only CreatedResult<T> is allowed, the non-generic one isn't
+            if (symCmp.Equals(typeSymbol.OriginalDefinition, context.Compilation.GetTypeByMetadataName("Octopus.Server.Extensibility.Web.Extensions.CreatedResult`1"))) return true; 
             
             context.ReportDiagnostic(Diagnostic.Create(MustNotReturnActionResults, location: methodDec.ReturnType.GetLocation()));
             return false;
