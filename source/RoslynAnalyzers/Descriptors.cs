@@ -36,6 +36,7 @@ namespace Octopus.RoslynAnalyzers
 
         // ----- General Analyzers that apply everywhere. Informally in the OCT1xxx number range ------
 
+        [Obsolete("Removed; The third party AsyncFixer analyzer also cover this exact same thing")]
         public static readonly DiagnosticDescriptor VoidMethodsMustNotBeAsync = new(
             "OCT1001",
             "Void methods must not be async.",
