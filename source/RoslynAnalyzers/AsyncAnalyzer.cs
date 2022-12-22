@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -15,7 +14,6 @@ using static Descriptors;
 public class AsyncAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
-        VoidMethodsMustNotBeAsync,
         MethodsReturningTaskMustBeAsync);
 
     public override void Initialize(AnalysisContext context)
@@ -32,19 +30,12 @@ public class AsyncAnalyzer : DiagnosticAnalyzer
         var isAsync = methodDec.Modifiers.Any(SyntaxKind.AsyncKeyword);
         if (isAsync)
         {
-            VoidMethods_MustNotBeAsync(context, methodDec);
+            // future analyzers targeting async methods go here
+            // such as AsyncMethodsMustNotHaveAsyncSuffix and AsyncMethodsMustTakeACancellationToken
         }
         else
         {
             MethodsReturningTask_MustBeAsync(context, methodDec);
-        }
-    }
-
-    void VoidMethods_MustNotBeAsync(SyntaxNodeAnalysisContext context, MethodDeclarationSyntax methodDec)
-    {
-        if (methodDec.ReturnType is PredefinedTypeSyntax p && p.Keyword.IsKind(SyntaxKind.VoidKeyword))
-        {
-            context.ReportDiagnostic(Diagnostic.Create(VoidMethodsMustNotBeAsync, methodDec.Identifier.GetLocation()));
         }
     }
 

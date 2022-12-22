@@ -33,5 +33,17 @@ namespace Octopus.RoslynAnalyzers
             => ns.IsGlobalNamespace || ns.ContainingNamespace.IsGlobalNamespace
                 ? ns
                 : GetTopMostNamespace(ns.ContainingNamespace);
+        
+        // If `type` is a Task<T> or ValueTask<T> then this returns the T.
+        // otherwise `type` is just returned as-is.
+        public static ITypeSymbol UnwrapTaskOf(this INamedTypeSymbol type)
+        {
+            if (type.IsGenericType && type.Name is "Task" or "ValueTask" && type.TypeArguments.Length > 0)
+            {
+                return type.TypeArguments[0];
+            }
+
+            return type;
+        }
     }
 }
