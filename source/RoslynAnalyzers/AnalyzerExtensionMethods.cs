@@ -47,17 +47,16 @@ namespace Octopus.RoslynAnalyzers
 
             return false;
         }
-        
+
         /// <summary>Returns true if sourceType inherits from baseType, walking down the type hierarchy as far as it can</summary>
         public static bool InheritsFrom(this ITypeSymbol? sourceType, ITypeSymbol? baseType)
         {
-            if (sourceType?.BaseType is not { } candidate) return false;
-
-            while (candidate != null)
+            var candidate = sourceType?.BaseType;
+            while (candidate != null && candidate.MetadataName != "Object")
             {
                 if (SymbolEqualityComparer.Default.Equals(candidate, baseType)) return true;
 
-                candidate = candidate.BaseType?.MetadataName == "Object" ? null : candidate.BaseType;
+                candidate = candidate.BaseType;
             }
 
             return false;
