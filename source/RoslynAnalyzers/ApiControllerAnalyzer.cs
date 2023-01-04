@@ -11,7 +11,7 @@ namespace Octopus.RoslynAnalyzers;
 using static Descriptors;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public partial class ApiControllerAnalyzer : DiagnosticAnalyzer
+public class ApiControllerAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(
         MustNotHaveSwaggerOperationAttribute,
