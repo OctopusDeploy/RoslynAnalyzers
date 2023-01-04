@@ -3,7 +3,6 @@ using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
 using System;
 using System.Threading.Tasks;
-using NUnit.Framework.Internal;
 using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.ApiControllerAnalyzer>;
 
 namespace Tests

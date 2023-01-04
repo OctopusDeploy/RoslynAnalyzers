@@ -88,6 +88,15 @@ namespace Octopus.RoslynAnalyzers
         //     DiagnosticSeverity.Error,
         //     true);
         
+        
+        public static readonly DiagnosticDescriptor DontUseIDocumentStoreOfEvent = new(
+            id: "OCT1007",
+            title: "Use IReadOnlyDocumentStore<Event> or IEventStore instead of IDocumentStore<Event>.",
+            messageFormat: "Use IReadOnlyDocumentStore<Event> or IEventStore instead of IDocumentStore<Event>.",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true);
+        
         // ----- Analyzers to help with Tests. Informally in the OCT2xxx number range -----
         
         public static DiagnosticDescriptor Oct2001NoIntegrationTestBaseClasses => GetTestAnalyzerDescriptor(
