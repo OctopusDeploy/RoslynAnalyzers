@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository stores independent roslyn analyzers we use internally at Octopus Deploy which are shared across multiple projects.
+This repository stores roslyn analyzers we use at Octopus Deploy which are shared across multiple projects.
 
 For analyzers targeted at the Octopus Server codebase, please do not add them here. Rather, refer to OctopusDeploy/source/Octopus.Server.RoslynAnalyzers
 
