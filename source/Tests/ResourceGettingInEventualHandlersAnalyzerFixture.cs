@@ -33,14 +33,19 @@ namespace TheNamespace
         [TestCase(false)]
         public async Task AllowsEventualHandlerWhenGetOrNullIsCalled(bool assignQueryToVariable)
         {
-            await Verify.VerifyAnalyzerAsync(GetSource(QueryType.GetOrNull, assignQueryToVariable));
+            var source = new SourceBuilder(QueryType.GetOrNull).WithAssignQueryToVariable(assignQueryToVariable).Build();
+            await Verify.VerifyAnalyzerAsync(source);
         }
 
         [TestCase(true)]
         [TestCase(false)]
         public async Task AllowsEventualHandlerImplementationWhenGetIsCalledAndErrorHandled(bool assignQueryToVariable)
         {
-            var sourceWithErrorHandling = GetSource(QueryType.Get, assignQueryToVariable, handleError: true);
+            var sourceWithErrorHandling = new SourceBuilder(QueryType.Get)
+                .WithAssignQueryToVariable(assignQueryToVariable)
+                .WithErrorHandling()
+                .Build();
+
             await Verify.VerifyAnalyzerAsync(sourceWithErrorHandling);
         }
 
@@ -48,7 +53,11 @@ namespace TheNamespace
         [TestCase(false)]
         public async Task FlagsEventualHandlerImplementationWhenGetIsCalledWithoutErrorHandling(bool assignQueryToVariable)
         {
-            var sourceWithoutErrorHandling = GetSource(QueryType.Get, assignQueryToVariable, handleError: false);
+            var sourceWithoutErrorHandling = new SourceBuilder(QueryType.Get)
+                .WithAssignQueryToVariable(assignQueryToVariable)
+                .WithErrorHandling(false)
+                .Build();
+
             await Verify.VerifyAnalyzerAsync(sourceWithoutErrorHandling, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
         }
 
@@ -56,7 +65,11 @@ namespace TheNamespace
         [TestCase(false)]
         public async Task FlagsWhenIReadOnlyDocumentStoreDerivedTypeIsCalledIncorrectly(bool assignQueryToVariable)
         {
-            var sourceWithDerivedDocumentStore = GetSource(QueryType.Get, assignQueryToVariable, useDerivedDocumentStore: true);
+            var sourceWithDerivedDocumentStore = new SourceBuilder(QueryType.Get)
+                .WithAssignQueryToVariable(assignQueryToVariable)
+                .UsingDerivedDocumentStore()
+                .Build();
+
             await Verify.VerifyAnalyzerAsync(sourceWithDerivedDocumentStore, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
         }
 
@@ -64,16 +77,45 @@ namespace TheNamespace
         [TestCase(false)]
         public async Task FlagsWhenGetOrNullIsCalledIfGetIsStillCalledIncorrectly(bool assignQueryToVariable)
         {
-            var sourceWithGetStillCalledIncorrectly = GetSource(QueryType.GetOrNullThenGet, assignQueryToVariable);
+            var sourceWithGetStillCalledIncorrectly = new SourceBuilder(QueryType.GetOrNullThenGet)
+                .WithAssignQueryToVariable(assignQueryToVariable)
+                .Build();
+
             await Verify.VerifyAnalyzerAsync(sourceWithGetStillCalledIncorrectly, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
         }
 
-        static string GetSource(
-            QueryType queryType,
-            bool assignQueryToVariable,
-            bool handleError = false,
-            bool useDerivedDocumentStore = false) =>
-            $@"
+        class SourceBuilder
+        {
+            readonly QueryType queryType;
+            bool assignQueryToVariable;
+            bool handleError;
+            bool useDerivedDocumentStore;
+
+            public SourceBuilder(QueryType queryType)
+            {
+                this.queryType = queryType;
+            }
+
+            public SourceBuilder WithAssignQueryToVariable(bool value)
+            {
+                assignQueryToVariable = value;
+                return this;
+            }
+
+            public SourceBuilder WithErrorHandling(bool value = true)
+            {
+                handleError = value;
+                return this;
+            }
+
+            public SourceBuilder UsingDerivedDocumentStore()
+            {
+                useDerivedDocumentStore = true;
+                return this;
+            }
+
+            public string Build() =>
+                $@"
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -89,9 +131,7 @@ namespace TheNamespace
                 throw new ArgumentNullException(nameof(@event));
             }}
 
-            {WrapWithErrorHandling(
-                $"{RenderVariableAssignment(assignQueryToVariable)}{RenderQuery(queryType, useDerivedDocumentStore)};",
-                handleError)};
+            {WrapWithErrorHandling($"{RenderVariableAssignment()}{RenderQuery()};")};
         }}
     }}
 
@@ -150,23 +190,22 @@ namespace TheNamespace
 }}
 ";
 
-        static string RenderQuery(QueryType queryType, bool useDerivedDocumentStore) =>
-            queryType switch
-            {
-                QueryType.Get => $@"new {RenderDocumentStore(useDerivedDocumentStore)}<object, string>().{{|#0:Get|}}(""SomeDocumentId"")",
-                QueryType.GetOrNull => $@"new {RenderDocumentStore(useDerivedDocumentStore)}<object, string>().GetOrNull(""SomeDocumentId"")",
-                QueryType.GetOrNullThenGet => $@"{RenderQuery(QueryType.GetOrNull, useDerivedDocumentStore)};{RenderQuery(QueryType.Get, useDerivedDocumentStore)}",
-                _ => throw new NotImplementedException()
-            };
+            string RenderQuery(QueryType? explicitQueryType = null) =>
+                (explicitQueryType ?? queryType) switch
+                {
+                    QueryType.Get => $@"new {RenderDocumentStore()}<object, string>().{{|#0:Get|}}(""SomeDocumentId"")",
+                    QueryType.GetOrNull => $@"new {RenderDocumentStore()}<object, string>().GetOrNull(""SomeDocumentId"")",
+                    QueryType.GetOrNullThenGet => $@"{RenderQuery(QueryType.GetOrNull)};{RenderQuery(QueryType.Get)}",
+                    _ => throw new NotImplementedException()
+                };
 
-        static string RenderDocumentStore(bool useDerivedDocumentStore) =>
-            useDerivedDocumentStore ? "DerivedDocumentStore" : "SimpleDocumentStore";
+            string RenderDocumentStore() => useDerivedDocumentStore ? "DerivedDocumentStore" : "SimpleDocumentStore";
 
-        static string RenderVariableAssignment(bool assignQueryToVariable) =>
-            assignQueryToVariable ? "var entity = " : "";
+            string RenderVariableAssignment() => assignQueryToVariable ? "var entity = " : "";
 
-        static string WrapWithErrorHandling(string statementToHandle, bool handleError) =>
-            handleError ? $@"try {{ {statementToHandle} }} catch (EntityNotFoundException) {{ }}" : statementToHandle;
+            string WrapWithErrorHandling(string statementToHandle) =>
+                handleError ? $@"try {{ {statementToHandle} }} catch (EntityNotFoundException) {{ }}" : statementToHandle;
+        }
 
         enum QueryType
         {
