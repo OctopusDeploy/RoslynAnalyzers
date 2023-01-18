@@ -31,35 +31,37 @@ public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
 
     static void CheckForAssumptionsThatResourceExists(SyntaxNodeAnalysisContext context)
     {
-        if (context.Node is ClassDeclarationSyntax classDeclaration)
+        if (context.Node is not ClassDeclarationSyntax classDeclaration)
         {
-            if (!ClassIsEventualHandler(classDeclaration))
+            return;
+        }
+
+        if (!ClassIsEventualHandler(classDeclaration))
+        {
+            return;
+        }
+
+        var handlerMethod = classDeclaration.Members
+            .OfType<MethodDeclarationSyntax>()
+            .First(method => method.Identifier.ValueText == "Handle");
+
+        var invocationsOfGet = handlerMethod.DescendantNodes().OfType<MemberAccessExpressionSyntax>().Where(access => access.Name.Identifier.ValueText == "Get");
+
+        foreach (var invocation in invocationsOfGet)
+        {
+            var symbol = context.SemanticModel.GetSymbolInfo(invocation).Symbol;
+            var isInvokedOnReadOnlyDocumentStore = symbol?.ContainingType.Name == "IReadOnlyDocumentStore";
+            isInvokedOnReadOnlyDocumentStore = isInvokedOnReadOnlyDocumentStore || (symbol?.ContainingType.AllInterfaces.Any(@interface => @interface.Name == "IReadOnlyDocumentStore") ?? false);
+
+            if (isInvokedOnReadOnlyDocumentStore)
             {
-                return;
-            }
+                var tryStatement = invocation.FirstAncestorOrSelf<TryStatementSyntax>();
 
-            var handlerMethod = classDeclaration.Members
-                .OfType<MethodDeclarationSyntax>()
-                .First(method => method.Identifier.ValueText == "Handle");
+                var entityNotFoundExceptionIsUnhandled = tryStatement?.Catches.Select(@catch => @catch.Declaration?.Type).OfType<IdentifierNameSyntax>().All(name => name.Identifier.ValueText != "EntityNotFoundException") ?? true;
 
-            var invocationsOfGet = handlerMethod.DescendantNodes().OfType<MemberAccessExpressionSyntax>().Where(access => access.Name.Identifier.ValueText == "Get");
-
-            foreach (var invocation in invocationsOfGet)
-            {
-                var symbol = context.SemanticModel.GetSymbolInfo(invocation).Symbol;
-                var isInvokedOnReadOnlyDocumentStore = symbol?.ContainingType.Name == "IReadOnlyDocumentStore";
-                isInvokedOnReadOnlyDocumentStore = isInvokedOnReadOnlyDocumentStore || (symbol?.ContainingType.AllInterfaces.Any(@interface => @interface.Name == "IReadOnlyDocumentStore") ?? false);
-
-                if (isInvokedOnReadOnlyDocumentStore)
+                if (entityNotFoundExceptionIsUnhandled)
                 {
-                    var tryStatement = invocation.FirstAncestorOrSelf<TryStatementSyntax>();
-
-                    var entityNotFoundExceptionIsUnhandled = tryStatement?.Catches.Select(@catch => @catch.Declaration?.Type).OfType<IdentifierNameSyntax>().All(name => name.Identifier.ValueText != "EntityNotFoundException") ?? true;
-
-                    if (entityNotFoundExceptionIsUnhandled)
-                    {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.Name.GetLocation()));
-                    }
+                    context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.Name.GetLocation()));
                 }
             }
         }
