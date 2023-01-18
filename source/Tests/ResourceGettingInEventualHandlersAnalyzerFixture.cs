@@ -9,6 +9,8 @@ namespace Tests
 {
     public class ResourceGettingInEventualHandlersAnalyzerFixture
     {
+        static DiagnosticResult ExpectedViolation => new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(SourceBuilder.OffenderLocation);
+
         [Test]
         public async Task DoesNotAnalyseClassNotImplementingEventualHandlerInterface()
         {
@@ -58,7 +60,7 @@ namespace TheNamespace
                 .WithErrorHandling(false)
                 .Build();
 
-            await Verify.VerifyAnalyzerAsync(sourceWithoutErrorHandling, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
+            await Verify.VerifyAnalyzerAsync(sourceWithoutErrorHandling, ExpectedViolation);
         }
 
         [TestCase(true)]
@@ -70,7 +72,7 @@ namespace TheNamespace
                 .UsingDerivedDocumentStore()
                 .Build();
 
-            await Verify.VerifyAnalyzerAsync(sourceWithDerivedDocumentStore, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
+            await Verify.VerifyAnalyzerAsync(sourceWithDerivedDocumentStore, ExpectedViolation);
         }
 
         [TestCase(true)]
@@ -81,7 +83,7 @@ namespace TheNamespace
                 .WithAssignQueryToVariable(assignQueryToVariable)
                 .Build();
 
-            await Verify.VerifyAnalyzerAsync(sourceWithGetStillCalledIncorrectly, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
+            await Verify.VerifyAnalyzerAsync(sourceWithGetStillCalledIncorrectly, ExpectedViolation);
         }
 
         [TestCase(true)]
@@ -93,11 +95,12 @@ namespace TheNamespace
                 .UsingIReadOnlyDocumentStore()
                 .Build();
 
-            await Verify.VerifyAnalyzerAsync(sourceWithDirectInvocation, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
+            await Verify.VerifyAnalyzerAsync(sourceWithDirectInvocation, ExpectedViolation);
         }
 
         class SourceBuilder
         {
+            public const int OffenderLocation = 0;
             readonly QueryType queryType;
             bool assignQueryToVariable;
             bool handleError;
@@ -226,7 +229,7 @@ namespace TheNamespace
             string RenderQuery(QueryType? explicitQueryType = null) =>
                 (explicitQueryType ?? queryType) switch
                 {
-                    QueryType.Get => @"documentStore.{|#0:Get|}(""SomeDocumentId"")",
+                    QueryType.Get => $@"documentStore.{{|#{OffenderLocation}:Get|}}(""SomeDocumentId"")",
                     QueryType.GetOrNull => @"documentStore.GetOrNull(""SomeDocumentId"")",
                     QueryType.GetOrNullThenGet => $@"{RenderQuery(QueryType.GetOrNull)};{RenderQuery(QueryType.Get)}",
                     _ => throw new NotImplementedException()
