@@ -122,7 +122,7 @@ using System.Threading.Tasks;
 
 namespace TheNamespace
 {{
-    public class SomeEventualHandler : IEventuallyHandle<SomeEvent>
+    public class SomeEventualHandler : IEventuallyHandleEvent<SomeEvent>
     {{
         public async Task Handle(SomeEvent @event)
         {{
@@ -135,7 +135,7 @@ namespace TheNamespace
         }}
     }}
 
-    public interface IEventuallyHandle<TEvent>
+    public interface IEventuallyHandleEvent<TEvent>
     {{
         Task Handle(TEvent @event);
     }}

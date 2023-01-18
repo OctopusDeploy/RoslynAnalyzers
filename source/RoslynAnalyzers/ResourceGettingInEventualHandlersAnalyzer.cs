@@ -66,6 +66,6 @@ public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
 
     static bool ClassIsEventualHandler(ClassDeclarationSyntax @class)
     {
-        return @class.BaseList?.Types.Select(t => t.Type).OfType<GenericNameSyntax>().Any(type => type.Identifier.ValueText == "IEventuallyHandle") ?? false;
+        return @class.BaseList?.Types.Select(t => t.Type).OfType<GenericNameSyntax>().Any(type => type.Identifier.ValueText == "IEventuallyHandleEvent") ?? false;
     }
 }
