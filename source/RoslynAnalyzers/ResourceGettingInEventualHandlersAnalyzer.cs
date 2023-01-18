@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -31,44 +32,68 @@ public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
 
     static void CheckForAssumptionsThatResourceExists(SyntaxNodeAnalysisContext context)
     {
-        if (context.Node is not ClassDeclarationSyntax classDeclaration)
+        foreach (var violation in FindViolations(context))
         {
-            return;
+            context.ReportDiagnostic(From(violation));
+        }
+    }
+
+    static IEnumerable<MemberAccessExpressionSyntax> FindViolations(SyntaxNodeAnalysisContext context)
+    {
+        if (context.Node is not ClassDeclarationSyntax classDeclaration || ClassIsNotEventualHandler(classDeclaration))
+        {
+            return Enumerable.Empty<MemberAccessExpressionSyntax>();
         }
 
-        if (!ClassIsEventualHandler(classDeclaration))
-        {
-            return;
-        }
+        var handlerMethod = FindHandlerMethod(classDeclaration);
 
-        var handlerMethod = classDeclaration.Members
+        var invocationsOfGet = handlerMethod == null
+            ? Enumerable.Empty<MemberAccessExpressionSyntax>()
+            : InvocationsOfGet(handlerMethod);
+
+        return invocationsOfGet
+            .Where(SymbolShowsInvocationIsOnIReadOnlyDocumentStore(context))
+            .Where(PossibleEntityNotFoundExceptionIsUnhandled);
+    }
+
+    static bool ClassIsNotEventualHandler(ClassDeclarationSyntax @class) =>
+        @class.BaseList?.Types
+            .Select(t => t.Type)
+            .OfType<GenericNameSyntax>()
+            .All(type => type.Identifier.ValueText != "IEventuallyHandleEvent")
+        ?? true;
+
+    static MethodDeclarationSyntax? FindHandlerMethod(ClassDeclarationSyntax @class) =>
+        @class.Members
             .OfType<MethodDeclarationSyntax>()
-            .First(method => method.Identifier.ValueText == "Handle");
+            .FirstOrDefault(method => method.Identifier.ValueText == "Handle");
 
-        var invocationsOfGet = handlerMethod.DescendantNodes().OfType<MemberAccessExpressionSyntax>().Where(access => access.Name.Identifier.ValueText == "Get");
+    static IEnumerable<MemberAccessExpressionSyntax> InvocationsOfGet(MethodDeclarationSyntax method) =>
+        method.DescendantNodes()
+            .OfType<MemberAccessExpressionSyntax>()
+            .Where(access => access.Name.Identifier.ValueText == "Get");
 
-        foreach (var invocation in invocationsOfGet)
+    static Func<MemberAccessExpressionSyntax, bool> SymbolShowsInvocationIsOnIReadOnlyDocumentStore(SyntaxNodeAnalysisContext context) =>
+        invocation =>
         {
             var symbol = context.SemanticModel.GetSymbolInfo(invocation).Symbol;
-            var isInvokedOnReadOnlyDocumentStore = symbol?.ContainingType.Name == "IReadOnlyDocumentStore";
-            isInvokedOnReadOnlyDocumentStore = isInvokedOnReadOnlyDocumentStore || (symbol?.ContainingType.AllInterfaces.Any(@interface => @interface.Name == "IReadOnlyDocumentStore") ?? false);
+            return symbol is not null && InvocationIsOnIReadOnlyDocumentStore(symbol);
+        };
 
-            if (isInvokedOnReadOnlyDocumentStore)
-            {
-                var tryStatement = invocation.FirstAncestorOrSelf<TryStatementSyntax>();
+    static bool InvocationIsOnIReadOnlyDocumentStore(ISymbol invocationSymbol) =>
+        invocationSymbol.ContainingType.Name == "IReadOnlyDocumentStore" ||
+        invocationSymbol.ContainingType.AllInterfaces.Any(@interface => @interface.Name == "IReadOnlyDocumentStore");
 
-                var entityNotFoundExceptionIsUnhandled = tryStatement?.Catches.Select(@catch => @catch.Declaration?.Type).OfType<IdentifierNameSyntax>().All(name => name.Identifier.ValueText != "EntityNotFoundException") ?? true;
-
-                if (entityNotFoundExceptionIsUnhandled)
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.Name.GetLocation()));
-                }
-            }
-        }
-    }
-
-    static bool ClassIsEventualHandler(ClassDeclarationSyntax @class)
+    static bool PossibleEntityNotFoundExceptionIsUnhandled(MemberAccessExpressionSyntax invocation)
     {
-        return @class.BaseList?.Types.Select(t => t.Type).OfType<GenericNameSyntax>().Any(type => type.Identifier.ValueText == "IEventuallyHandleEvent") ?? false;
+        var tryStatement = invocation.FirstAncestorOrSelf<TryStatementSyntax>();
+        return tryStatement?.Catches
+                .Select(@catch => @catch.Declaration?.Type)
+                .OfType<IdentifierNameSyntax>()
+                .All(name => name.Identifier.ValueText != "EntityNotFoundException")
+            ?? true;
     }
+
+    static Diagnostic From(MemberAccessExpressionSyntax violation) =>
+        Diagnostic.Create(Rule, violation.Name.GetLocation());
 }
