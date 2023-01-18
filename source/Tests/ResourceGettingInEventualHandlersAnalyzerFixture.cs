@@ -84,12 +84,25 @@ namespace TheNamespace
             await Verify.VerifyAnalyzerAsync(sourceWithGetStillCalledIncorrectly, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task FlagsWhenInvokingGetIncorrectlyOnIReadOnlyDocumentStoreDirectly(bool assignQueryToVariable)
+        {
+            var sourceWithDirectInvocation = new SourceBuilder(QueryType.Get)
+                .WithAssignQueryToVariable(assignQueryToVariable)
+                .UsingIReadOnlyDocumentStore()
+                .Build();
+
+            await Verify.VerifyAnalyzerAsync(sourceWithDirectInvocation, new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(0));
+        }
+
         class SourceBuilder
         {
             readonly QueryType queryType;
             bool assignQueryToVariable;
             bool handleError;
             bool useDerivedDocumentStore;
+            bool useIReadOnlyDocumentStore;
 
             public SourceBuilder(QueryType queryType)
             {
@@ -110,7 +123,25 @@ namespace TheNamespace
 
             public SourceBuilder UsingDerivedDocumentStore()
             {
+                if (useIReadOnlyDocumentStore)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot call {nameof(UsingDerivedDocumentStore)} because {nameof(UsingIReadOnlyDocumentStore)} has already been called");
+                }
+
                 useDerivedDocumentStore = true;
+                return this;
+            }
+
+            public SourceBuilder UsingIReadOnlyDocumentStore()
+            {
+                if (useDerivedDocumentStore)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot call {nameof(UsingIReadOnlyDocumentStore)} because {nameof(UsingDerivedDocumentStore)} has already been called");
+                }
+
+                useIReadOnlyDocumentStore = true;
                 return this;
             }
 
@@ -124,6 +155,8 @@ namespace TheNamespace
 {{
     public class SomeEventualHandler : IEventuallyHandleEvent<SomeEvent>
     {{
+        readonly {RenderDocumentStoreType()} documentStore = new DerivedDocumentStore<object, string>();
+
         public async Task Handle(SomeEvent @event)
         {{
             if (@event is null)
@@ -131,7 +164,7 @@ namespace TheNamespace
                 throw new ArgumentNullException(nameof(@event));
             }}
 
-            {WrapWithErrorHandling($"{RenderVariableAssignment()}{RenderQuery()};")};
+            {WrapWithErrorHandling($"{RenderVariableAssignment()}{RenderQuery()};")}
         }}
     }}
 
@@ -193,13 +226,21 @@ namespace TheNamespace
             string RenderQuery(QueryType? explicitQueryType = null) =>
                 (explicitQueryType ?? queryType) switch
                 {
-                    QueryType.Get => $@"new {RenderDocumentStore()}<object, string>().{{|#0:Get|}}(""SomeDocumentId"")",
-                    QueryType.GetOrNull => $@"new {RenderDocumentStore()}<object, string>().GetOrNull(""SomeDocumentId"")",
+                    QueryType.Get => @"documentStore.{|#0:Get|}(""SomeDocumentId"")",
+                    QueryType.GetOrNull => @"documentStore.GetOrNull(""SomeDocumentId"")",
                     QueryType.GetOrNullThenGet => $@"{RenderQuery(QueryType.GetOrNull)};{RenderQuery(QueryType.Get)}",
                     _ => throw new NotImplementedException()
                 };
 
-            string RenderDocumentStore() => useDerivedDocumentStore ? "DerivedDocumentStore" : "SimpleDocumentStore";
+            string RenderDocumentStoreType() =>
+                (useDerivedDocumentStore, useIReadOnlyDocumentStore) switch
+                {
+                    (true, true) => throw new InvalidOperationException(
+                        "Cannot render both DerivedDocumentStore and IReadOnlyDocumentStore"),
+                    (true, false) => "DerivedDocumentStore<object, string>",
+                    (false, true) => "IReadOnlyDocumentStore<object, string>",
+                    (false, false) => "SimpleDocumentStore<object, string>"
+                };
 
             string RenderVariableAssignment() => assignQueryToVariable ? "var entity = " : "";
 

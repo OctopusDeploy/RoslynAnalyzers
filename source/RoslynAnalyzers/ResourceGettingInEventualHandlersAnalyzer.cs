@@ -47,7 +47,8 @@ public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
             foreach (var invocation in invocationsOfGet)
             {
                 var symbol = context.SemanticModel.GetSymbolInfo(invocation).Symbol;
-                var isInvokedOnReadOnlyDocumentStore = symbol?.ContainingType.AllInterfaces.Any(@interface => @interface.Name == "IReadOnlyDocumentStore") ?? false;
+                var isInvokedOnReadOnlyDocumentStore = symbol?.ContainingType.Name == "IReadOnlyDocumentStore";
+                isInvokedOnReadOnlyDocumentStore = isInvokedOnReadOnlyDocumentStore || (symbol?.ContainingType.AllInterfaces.Any(@interface => @interface.Name == "IReadOnlyDocumentStore") ?? false);
 
                 if (isInvokedOnReadOnlyDocumentStore)
                 {
