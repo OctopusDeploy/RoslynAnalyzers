@@ -13,10 +13,10 @@ namespace Octopus.RoslynAnalyzers;
 public class GettingDocumentsInEventualHandlersAnalyzer : DiagnosticAnalyzer
 {
     internal static readonly DiagnosticDescriptor Rule = new(
-        id: "Octopus_ResourceGettingInEventualHandlers",
-        title: "Eventual handler should not assume resource exists",
-        description: "This implementation of `IEventualHandler<TEvent>.Handle` assumes a resource identified by the `TEvent` event to exist. Either catch the possible `EntityNotFoundException` that `IReadOnlyDocumentStore.Get` can throw, or call `IReadOnlyDocumentStore.GetOrNull` and handle the possible `null` return value.",
-        messageFormat: "This implementation of `IEventualHandler<TEvent>.Handle` assumes a resource identified by the `TEvent` event to exist. Either catch the possible `EntityNotFoundException` that `IReadOnlyDocumentStore.Get` can throw, or call `IReadOnlyDocumentStore.GetOrNull` and handle the possible `null` return value.",
+        id: "Octopus_GettingDocumentsInEventualHandlers",
+        title: "Eventual handler should not assume document exists",
+        description: "This implementation of IEventuallyHandleEvent<TEvent>.Handle assumes a document still exists. Either catch the possible EntityNotFoundException that IReadOnlyDocumentStore.Get can throw, or call IReadOnlyDocumentStore.GetOrNull.",
+        messageFormat: "This implementation of IEventuallyHandleEvent<TEvent>.Handle assumes a document still exists. Either catch the possible EntityNotFoundException that IReadOnlyDocumentStore.Get can throw, or call IReadOnlyDocumentStore.GetOrNull.",
         category: "Octopus",
         defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true);
