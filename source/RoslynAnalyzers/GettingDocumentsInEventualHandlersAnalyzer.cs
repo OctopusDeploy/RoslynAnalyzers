@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace Octopus.RoslynAnalyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
+public class GettingDocumentsInEventualHandlersAnalyzer : DiagnosticAnalyzer
 {
     internal static readonly DiagnosticDescriptor Rule = new(
         id: "Octopus_ResourceGettingInEventualHandlers",

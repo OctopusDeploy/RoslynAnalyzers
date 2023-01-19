@@ -4,13 +4,13 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
-using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.ResourceGettingInEventualHandlersAnalyzer>;
+using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.GettingDocumentsInEventualHandlersAnalyzer>;
 
 namespace Tests
 {
-    public class ResourceGettingInEventualHandlersAnalyzerFixture
+    public class GettingDocumentsInEventualHandlersAnalyzerFixture
     {
-        static DiagnosticResult ExpectedViolation => new DiagnosticResult(ResourceGettingInEventualHandlersAnalyzer.Rule).WithLocation(SourceBuilder.OffenderLocation);
+        static DiagnosticResult ExpectedViolation => new DiagnosticResult(GettingDocumentsInEventualHandlersAnalyzer.Rule).WithLocation(SourceBuilder.OffenderLocation);
 
         [Test]
         public async Task DoesNotAnalyseClassNotImplementingEventualHandlerInterface()
@@ -34,7 +34,7 @@ namespace TheNamespace
 
         [TestCase(true)]
         [TestCase(false)]
-        public async Task AllowsEventualHandlerWhenGetOrNullIsCalled(bool assignQueryToVariable)
+        public async Task AllowsWhenGetOrNullIsCalled(bool assignQueryToVariable)
         {
             var source = new SourceBuilder(QueryType.GetOrNull).WithAssignQueryToVariable(assignQueryToVariable).Build();
             await Verify.VerifyAnalyzerAsync(source);
@@ -42,7 +42,7 @@ namespace TheNamespace
 
         [TestCase(true)]
         [TestCase(false)]
-        public async Task AllowsEventualHandlerImplementationWhenGetIsCalledAndErrorHandled(bool assignQueryToVariable)
+        public async Task AllowsWhenGetIsCalledAndErrorHandled(bool assignQueryToVariable)
         {
             var sourceWithErrorHandling = new SourceBuilder(QueryType.Get)
                 .WithAssignQueryToVariable(assignQueryToVariable)
@@ -54,7 +54,7 @@ namespace TheNamespace
 
         [TestCase(true)]
         [TestCase(false)]
-        public async Task FlagsEventualHandlerImplementationWhenGetIsCalledWithoutErrorHandling(bool assignQueryToVariable)
+        public async Task FlagsWhenGetIsCalledWithoutErrorHandling(bool assignQueryToVariable)
         {
             var sourceWithoutErrorHandling = new SourceBuilder(QueryType.Get)
                 .WithAssignQueryToVariable(assignQueryToVariable)
