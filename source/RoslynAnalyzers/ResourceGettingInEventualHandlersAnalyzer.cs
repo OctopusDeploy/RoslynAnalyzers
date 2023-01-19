@@ -45,15 +45,18 @@ public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
             return Enumerable.Empty<MemberAccessExpressionSyntax>();
         }
 
-        var handlerMethod = FindHandlerMethod(classDeclaration);
+        var methods = GetMethodsFrom(classDeclaration);
 
-        var invocationsOfGet = handlerMethod == null
-            ? Enumerable.Empty<MemberAccessExpressionSyntax>()
-            : InvocationsOfGet(handlerMethod);
+        var invocationsOfGet = methods.SelectMany(InvocationsOfGet);
 
         return invocationsOfGet
             .Where(SymbolShowsInvocationIsOnIReadOnlyDocumentStore(context))
             .Where(PossibleEntityNotFoundExceptionIsUnhandled);
+    }
+
+    static IEnumerable<MethodDeclarationSyntax> GetMethodsFrom(ClassDeclarationSyntax classDeclaration)
+    {
+        return classDeclaration.Members.OfType<MethodDeclarationSyntax>();
     }
 
     static bool ClassIsNotEventualHandler(ClassDeclarationSyntax @class) =>

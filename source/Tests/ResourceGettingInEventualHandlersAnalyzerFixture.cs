@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Testing;
 using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
@@ -98,6 +99,15 @@ namespace TheNamespace
             await Verify.VerifyAnalyzerAsync(sourceWithDirectInvocation, ExpectedViolation);
         }
 
+        [Test]
+        public async Task FlagsWhenInvokingGetIncorrectlyInHelperMethodReferencedByHandleMethod()
+        {
+            var sourceWithHelperReference = new SourceBuilder(QueryType.DeferToHelper)
+                .Build();
+
+            await Verify.VerifyAnalyzerAsync(sourceWithHelperReference, ExpectedViolation);
+        }
+
         class SourceBuilder
         {
             public const int OffenderLocation = 0;
@@ -169,6 +179,8 @@ namespace TheNamespace
 
             {WrapWithErrorHandling($"{RenderVariableAssignment()}{RenderQuery()};")}
         }}
+
+        {RenderHelperMethod()}
     }}
 
     public interface IEventuallyHandleEvent<TEvent>
@@ -232,6 +244,7 @@ namespace TheNamespace
                     QueryType.Get => $@"documentStore.{{|#{OffenderLocation}:Get|}}(""SomeDocumentId"")",
                     QueryType.GetOrNull => @"documentStore.GetOrNull(""SomeDocumentId"")",
                     QueryType.GetOrNullThenGet => $@"{RenderQuery(QueryType.GetOrNull)};{RenderQuery(QueryType.Get)}",
+                    QueryType.DeferToHelper => @"await HandleInternal()",
                     _ => throw new NotImplementedException()
                 };
 
@@ -249,13 +262,26 @@ namespace TheNamespace
 
             string WrapWithErrorHandling(string statementToHandle) =>
                 handleError ? $@"try {{ {statementToHandle} }} catch (EntityNotFoundException) {{ }}" : statementToHandle;
+
+            string RenderHelperMethod()
+            {
+                return queryType == QueryType.DeferToHelper
+                    ? $@"
+async Task HandleInternal()
+{{
+    await documentStore.{{|#{OffenderLocation}:Get|}}(""SomeDocumentId"", new CancellationToken());
+}}
+"
+                    : "";
+            }
         }
 
         enum QueryType
         {
             Get,
             GetOrNull,
-            GetOrNullThenGet
+            GetOrNullThenGet,
+            DeferToHelper
         }
     }
 }
