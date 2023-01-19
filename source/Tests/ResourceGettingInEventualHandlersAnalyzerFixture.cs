@@ -108,6 +108,14 @@ namespace TheNamespace
             await Verify.VerifyAnalyzerAsync(sourceWithHelperReference, ExpectedViolation);
         }
 
+        [Test]
+        public async Task FlagsViolationAtInformationLevel()
+        {
+            var source = new SourceBuilder(QueryType.Get).Build();
+
+            await Verify.VerifyAnalyzerAsync(source, ExpectedViolation.WithSeverity(DiagnosticSeverity.Info));
+        }
+
         class SourceBuilder
         {
             public const int OffenderLocation = 0;

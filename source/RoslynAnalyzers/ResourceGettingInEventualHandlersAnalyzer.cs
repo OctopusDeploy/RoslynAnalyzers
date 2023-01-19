@@ -18,7 +18,7 @@ public class ResourceGettingInEventualHandlersAnalyzer : DiagnosticAnalyzer
         description: "This implementation of `IEventualHandler<TEvent>.Handle` assumes a resource identified by the `TEvent` event to exist. Either catch the possible `EntityNotFoundException` that `IReadOnlyDocumentStore.Get` can throw, or call `IReadOnlyDocumentStore.GetOrNull` and handle the possible `null` return value.",
         messageFormat: "This implementation of `IEventualHandler<TEvent>.Handle` assumes a resource identified by the `TEvent` event to exist. Either catch the possible `EntityNotFoundException` that `IReadOnlyDocumentStore.Get` can throw, or call `IReadOnlyDocumentStore.GetOrNull` and handle the possible `null` return value.",
         category: "Octopus",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Info,
         isEnabledByDefault: true);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
