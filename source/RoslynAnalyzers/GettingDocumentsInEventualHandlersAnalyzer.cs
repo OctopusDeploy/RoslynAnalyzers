@@ -61,11 +61,6 @@ public class GettingDocumentsInEventualHandlersAnalyzer : DiagnosticAnalyzer
             .All(type => type.Identifier.ValueText != "IEventuallyHandleEvent")
         ?? true;
 
-    static MethodDeclarationSyntax? FindHandlerMethod(ClassDeclarationSyntax @class) =>
-        @class.Members
-            .OfType<MethodDeclarationSyntax>()
-            .FirstOrDefault(method => method.Identifier.ValueText == "Handle");
-
     static IEnumerable<MemberAccessExpressionSyntax> InvocationsOfGet(MethodDeclarationSyntax method) =>
         method.DescendantNodes()
             .OfType<MemberAccessExpressionSyntax>()
