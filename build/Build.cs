@@ -31,12 +31,14 @@ class Build : NukeBuild
     AbsolutePath SourceDirectory => RootDirectory / "source";
     AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
     AbsolutePath LocalPackagesDirectory => RootDirectory / ".." / "LocalPackages";
+    AbsolutePath TestResultsDirectory => RootDirectory / "TestResults";
 
     Target Clean => _ => _
         .Before(Restore)
         .Executes(() =>
         {
             SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
+            DeleteDirectory(TestResultsDirectory);
             EnsureCleanDirectory(ArtifactsDirectory);
         });
 
@@ -80,7 +82,8 @@ class Build : NukeBuild
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
                 .SetNoBuild(true)
-                .EnableNoRestore());
+                .EnableNoRestore()
+                .SetResultsDirectory(TestResultsDirectory));
         });
 
     Target Pack => _ => _
