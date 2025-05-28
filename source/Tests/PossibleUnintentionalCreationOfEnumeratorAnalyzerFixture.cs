@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.Testing.Verifiers;
 using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
-using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.PossibleUnintentionalCreationOfEnumeratorAnalyzer>;
+using Verify = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerVerifier<Octopus.RoslynAnalyzers.PossibleUnintentionalCreationOfEnumeratorAnalyzer, Microsoft.CodeAnalysis.Testing.DefaultVerifier>;
 
 namespace Tests
 {
@@ -49,7 +48,7 @@ namespace Tests
         public async Task AnyCallIsIgnoredOnKnownTypesForNet50(string type)
         {
             var source = GetSource($"var n = {type}.Any();");
-            var test = new CSharpAnalyzerTest<PossibleUnintentionalCreationOfEnumeratorAnalyzer, NUnitVerifier>
+            var test = new CSharpAnalyzerTest<PossibleUnintentionalCreationOfEnumeratorAnalyzer, DefaultVerifier>
             {
                 TestCode = source,
                 ReferenceAssemblies = ReferenceAssemblies.Net.Net50
@@ -62,7 +61,7 @@ namespace Tests
         public async Task AnyCallIsDetectedOnKnownTypesForPreNet50(string type)
         {
             var source = GetSource($"var n = {type}.{{|#0:Any|}}();");
-            var test = new CSharpAnalyzerTest<PossibleUnintentionalCreationOfEnumeratorAnalyzer, NUnitVerifier>
+            var test = new CSharpAnalyzerTest<PossibleUnintentionalCreationOfEnumeratorAnalyzer, DefaultVerifier>
             {
                 TestCode = source,
                 ReferenceAssemblies = ReferenceAssemblies.NetCore.NetCoreApp31

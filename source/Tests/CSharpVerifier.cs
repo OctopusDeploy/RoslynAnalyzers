@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
-using Microsoft.CodeAnalysis.Testing.Verifiers;
 
 namespace Tests
 {
@@ -22,7 +21,7 @@ namespace Tests
         }
     }
 
-    public class Test<TAnalyzer> : CSharpCodeFixTest<TAnalyzer, EmptyCodeFixProvider, NUnitVerifier> where TAnalyzer : DiagnosticAnalyzer, new()
+    public class Test<TAnalyzer> : CSharpCodeFixTest<TAnalyzer, EmptyCodeFixProvider, DefaultVerifier> where TAnalyzer : DiagnosticAnalyzer, new()
     {
         public Test()
         {
