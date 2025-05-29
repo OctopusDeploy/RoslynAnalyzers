@@ -2,7 +2,7 @@
 using Microsoft.CodeAnalysis.Testing;
 using NUnit.Framework;
 using Octopus.RoslynAnalyzers;
-using Verify = Microsoft.CodeAnalysis.CSharp.Testing.NUnit.AnalyzerVerifier<Octopus.RoslynAnalyzers.LongRunningTaskWithAsyncWorkloadAnalyzer>;
+using Verify = Microsoft.CodeAnalysis.CSharp.Testing.CSharpAnalyzerVerifier<Octopus.RoslynAnalyzers.LongRunningTaskWithAsyncWorkloadAnalyzer, Microsoft.CodeAnalysis.Testing.DefaultVerifier>;
 
 namespace Tests
 {
