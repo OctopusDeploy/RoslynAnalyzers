@@ -2,22 +2,25 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace></RootNamespace>
     <NoWarn>CS0649;CS0169</NoWarn>
     <NukeRootDirectory>..</NukeRootDirectory>
     <NukeScriptDirectory>..</NukeScriptDirectory>
     <NukeTelemetryVersion>1</NukeTelemetryVersion>
-    <!-- NET8: Remove this when Nuke releases a new version which sets it for us -->
-    <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nuke.Common" Version="7.0.6" />
+    <PackageReference Include="Nuke.Common" Version="10.1.0" />
+    <!-- Override transitive dependencies of Nuke.Common to patch known vulnerabilities (NU1901/NU1903).
+         NuGet.Packaging 7.x also brings a NuGet.Frameworks new enough for the .NET 10 SDK's MSBuild, which otherwise fails
+         when Nuke evaluates the build project ("Exception was suppressed" warning). Remove once Nuke ships newer versions. -->
+    <PackageReference Include="NuGet.Packaging" Version="7.9.0" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.20" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageDownload Include="Octopus.OctoVersion.Tool" Version="[0.3.295]" />
+    <PackageDownload Include="Octopus.OctoVersion.Tool" Version="[1.1.79]" />
   </ItemGroup>
 
 </Project>
