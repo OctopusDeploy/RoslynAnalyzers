@@ -7,7 +7,7 @@ using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities.Collections;
 using Serilog;
-using static Nuke.Common.IO.FileSystemTasks;
+using System.IO;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
 [UnsetVisualStudioEnvironmentVariables]
@@ -104,7 +104,8 @@ class Build : NukeBuild
         .Executes(() =>
         {
             LocalPackagesDirectory.CreateDirectory();
-            CopyFileToDirectory(ArtifactsDirectory / $"Octopus.RoslynAnalyzers.{OctoVersionInfo.FullSemVer}.nupkg", LocalPackagesDirectory, FileExistsPolicy.Overwrite);
+            AbsolutePath package = ArtifactsDirectory / $"Octopus.RoslynAnalyzers.{OctoVersionInfo.FullSemVer}.nupkg";
+            File.Copy(package, LocalPackagesDirectory / package.Name, overwrite: true);
         });
 
     Target Default => _ => _

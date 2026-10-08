@@ -7,7 +7,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>8</LangVersion>
     <DisableImplicitPackageTargetFallback>true</DisableImplicitPackageTargetFallback>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <nullable>enable</nullable>
   </PropertyGroup>
 
