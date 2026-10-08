@@ -12,6 +12,11 @@
 
   <ItemGroup>
     <PackageReference Include="Nuke.Common" Version="10.1.0" />
+    <!-- Override transitive dependencies of Nuke.Common to patch known vulnerabilities (NU1901/NU1903).
+         NuGet.Packaging 7.x also brings a NuGet.Frameworks new enough for the .NET 10 SDK's MSBuild, which otherwise fails
+         when Nuke evaluates the build project ("Exception was suppressed" warning). Remove once Nuke ships newer versions. -->
+    <PackageReference Include="NuGet.Packaging" Version="7.9.0" />
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="9.0.20" />
   </ItemGroup>
 
   <ItemGroup>
