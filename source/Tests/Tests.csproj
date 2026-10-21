@@ -18,6 +18,8 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
     <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.41" />
     <PackageReference Include="Microsoft.CodeAnalysis" Version="4.14.0" />
+    <!-- Overrides the vulnerable version NuGet.Packaging brings in through Microsoft.CodeAnalysis.Analyzer.Testing. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="9.0.21" />
   </ItemGroup>
 
   <ItemGroup>
